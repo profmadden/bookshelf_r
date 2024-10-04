@@ -1,0 +1,9 @@
+[package]
+name = "bookshelf"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+scan_fmt = "0.2.6"
+sscanf = "0.4.2"
+# malduit = {path = "malduit"}
