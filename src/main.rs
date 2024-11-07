@@ -1,7 +1,13 @@
 // use Bookshelf;
-use bookshelf::BookshelfCircuit;
+// use crate::lib::BookshelfCircuit;
+// use bookshelf::BookshelfCircuit;
 use std::env;
+
 // use malduit::optimizer;
+// use bookshelf_r;
+// use crate::bookshelf::BookshelfCircuit;
+mod bookshelf;
+mod marklist;
 
 fn main() {
     println!("Main program for bookshelf reader.\n");
@@ -9,8 +15,21 @@ fn main() {
 
     // optimizer::maltest();
 
+    let mut ml = marklist::MarkList::new(40);
+    // marklist::ml::mark(4);
+    ml.mark(4);
+    ml.mark(3);
+    ml.mark(4);
+    ml.mark(3);
+    ml.dump();
+    ml.clear();
+    ml.mark(33);
+    ml.mark(4);
+    ml.dump();
+    
     if args.len() == 2 {
-        let mut bc = BookshelfCircuit::read_aux(args[1].clone());
-	bc.summarize();
+        let bc = crate::bookshelf::BookshelfCircuit::read_aux(args[1].clone());
+        bc.summarize();
+        bookshelf::callme();
     }
 }
