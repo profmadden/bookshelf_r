@@ -33,12 +33,22 @@ pub struct PinRef {
     pub index: usize,
 }
 
+pub struct Location {
+    pub x: f32,
+    pub y: f32,
+    // pub orientation: u8,
+}
+
+pub struct Orientation {
+    pub orient: u8,
+}
+
 pub struct Cell {
     pub name: String,
     pub w: f32,
     pub h: f32,
-    pub x: f32,
-    pub y: f32,
+    // pub x: f32,
+    // pub y: f32,
     pub pins: Vec<PinInstance>,
     pub terminal: bool,
 }
@@ -69,6 +79,8 @@ pub struct Row {
 pub struct BookshelfCircuit {
     pub counter: i32,
     pub cells: Vec<Cell>,
+    pub cellpos: Vec<Location>,
+    pub orient: Vec<Orientation>,
     pub nets: Vec<Net>,
     pub macros: Vec<Macro>,
     pub rows: Vec<Row>,
@@ -86,6 +98,8 @@ impl BookshelfCircuit {
         let mut bc = BookshelfCircuit {
             counter: 0,
             cells: Vec::new(),
+            cellpos: Vec::new(),
+            orient: Vec::new(),
             nets: Vec::new(),
             macros: Vec::new(),
             rows: Vec::new(),
@@ -181,13 +195,26 @@ impl BookshelfCircuit {
                     name: cellname,
                     w: xf,
                     h: yf,
-                    x: 0.0,
-                    y: 0.0,
+                    // x: 0.0,
+                    // y: 0.0,
                     pins: Vec::new(),
                     terminal: isterminal,
                 };
 
                 self.cells.push(c);
+
+                let cp = Location {
+                    x: 0.0,
+                    y: 0.0,
+                    // orientation: 0,
+                };
+                self.cellpos.push(cp);
+
+                let co = Orientation {
+                    orient: 0
+                };
+                self.orient.push(co);
+
             } else {
                 println!("Not ok match");
             }
@@ -309,9 +336,9 @@ impl BookshelfCircuit {
                     if LDBG { println!("Read PL line {}", l);}
                     if let Ok((cellname, x, y)) = scan_fmt!(&l, " {} {} {}", String, String, String) {
                         let cidx = self.find_cell(cellname);
-                        self.cells[cidx].x = x.parse().unwrap();
-                        self.cells[cidx].y = y.parse().unwrap();
-                        if LDBG{ println!("  Locate cell at {} {}", self.cells[cidx].x, self.cells[cidx].y);}
+                        self.cellpos[cidx].x = x.parse().unwrap();
+                        self.cellpos[cidx].y = y.parse().unwrap();
+                        if LDBG{ println!("  Locate cell at {} {}", self.cellpos[cidx].x, self.cellpos[cidx].y);}
                     }
                     
                 },
@@ -343,51 +370,77 @@ impl BookshelfCircuit {
             // CoreRow Horizontal
             let line = BookshelfCircuit::getline(&mut reader).unwrap();
 
+            let mut coordinate = 0 as f32;
+            let mut height = 0 as f32;
+            let mut sitewidth = 0 as f32;
+            let mut sitespacing = 0 as f32;
+            let mut orient = 0 as u32;
+            let mut symmetry = 0 as u32;
+            let mut origin = 0 as f32;
+            let mut numsites = 0 as f32;
+
             // Coordinate : n 
             let line = BookshelfCircuit::getline(&mut reader).unwrap();
-            if let Ok(crd) = scan_fmt!(&line, " Coordinate : {d}", u32) {
+            if let Ok(crd) = scan_fmt!(&line, " Coordinate : {d}", f32) {
                 println!("  Coord {}", crd);
+                coordinate = crd;
             }
             // Height : n
             let line = BookshelfCircuit::getline(&mut reader).unwrap();
-            if let Ok(crd) = scan_fmt!(&line, " Height : {d}", u32) {
-              println!("  Height {}", crd);
+            if let Ok(ht) = scan_fmt!(&line, " Height : {d}", f32) {
+              println!("  Height {}", ht);
+              height = ht;
             }
             // Sitewidth : n 
             let line = BookshelfCircuit::getline(&mut reader).unwrap();
-            if let Ok(crd) = scan_fmt!(&line, " Sitewidth : {d}", u32) {
-                println!("  Sitewidth {}", crd);
+            if let Ok(sw) = scan_fmt!(&line, " Sitewidth : {d}", f32) {
+                println!("  Sitewidth {}", sw);
+                sitewidth = sw;
             }
             // Sitespacing : n
             let line = BookshelfCircuit::getline(&mut reader).unwrap();
-            if let Ok(crd) = scan_fmt!(&line, " Sitespacing : {d}", u32) {
-              println!("  Spacing {}", crd);
+            if let Ok(ss) = scan_fmt!(&line, " Sitespacing : {d}", f32) {
+              println!("  Spacing {}", ss);
+              sitespacing = ss;
             }
             // Siteorient : n 
             let line = BookshelfCircuit::getline(&mut reader).unwrap();
-            if let Ok(crd) = scan_fmt!(&line, " Siteorient : {s}", String) {
-                println!("  Orient {}", crd);
+            if let Ok(so) = scan_fmt!(&line, " Siteorient : {s}", String) {
+                println!("  Orient {}", so);
+                orient = 0;
             }
             // Sitesymmetry : n
             let line = BookshelfCircuit::getline(&mut reader).unwrap();
-            if let Ok(crd) = scan_fmt!(&line, " Sitesymmetry : {s}", String) {
-              println!("  Symmetry {}", crd);
+            if let Ok(sym) = scan_fmt!(&line, " Sitesymmetry : {s}", String) {
+              println!("  Symmetry {}", sym);
+              symmetry = 0;
             }
             // SubrowOrigin : n  Numsites : n
             let line = BookshelfCircuit::getline(&mut reader).unwrap();
-            if let Ok((sro, ns)) = scan_fmt!(&line, " SubrowOrigin : {d} Numsites : {d}", u32, u32) {
+            if let Ok((sro, ns)) = scan_fmt!(&line, " SubrowOrigin : {d} Numsites : {d}", f32, f32) {
               println!("  SRO  {}  NS {}", sro, ns);
+              origin = sro;
+              numsites = ns;
             }
 
             // End line
             let line = BookshelfCircuit::getline(&mut reader).unwrap();
+
+            self.rows.push(Row {
+                name: "row".to_string(),
+                llx: origin,
+                lly: coordinate,
+                urx: origin + numsites * sitewidth,
+                ury: coordinate + height,
+                siteSpacing: sitespacing,
+            });
         }
         
         0 
     }
 
     pub fn summarize(&self) {
-        println!("Circuit has {} cells", self.cells.len());
+        println!("Circuit has {} cells, {} rows", self.cells.len(), self.rows.len());
         for i in self.cells.len() - 10..self.cells.len() {
             println!(
                 "Cell {} size {} x {}",
@@ -399,6 +452,10 @@ impl BookshelfCircuit {
                     p.dx, p.dy, self.nets[p.parentNet].name
                 );
             }
+        }
+        for rn in 0..6.min(self.rows.len()) {
+            println!("Row {}  ({}, {}) to ({}, {})", rn,
+        self.rows[rn].llx, self.rows[rn].lly, self.rows[rn].urx, self.rows[rn].ury);
         }
     }
 
@@ -423,7 +480,7 @@ impl BookshelfCircuit {
 
             return Ok(line.trim().to_string());
         }
-        Error::new(ErrorKind::Other, "Not reachable FILE IO error");
+        // Error::new(ErrorKind::Other, "Not reachable FILE IO error");
     }
 
     fn getmatch(reader: &mut BufReader<File>, fmt: String) -> std::io::Result<String> {
@@ -486,8 +543,8 @@ impl BookshelfCircuit {
             let mut urx = 0.0;
             let mut ury = 0.0;
             for pref in &n.pins {
-                let px = self.cells[pref.parentCell].x + self.cells[pref.parentCell].pins[pref.index].dx;
-                let py = self.cells[pref.parentCell].y + self.cells[pref.parentCell].pins[pref.index].dy;
+                let px = self.cellpos[pref.parentCell].x + self.cells[pref.parentCell].pins[pref.index].dx;
+                let py = self.cellpos[pref.parentCell].y + self.cells[pref.parentCell].pins[pref.index].dy;
                 if counter > 0 {
                     println!("Pinref cell {} pin {} at {} {}", self.cells[pref.parentCell].name, pref.index, px, py);
                 }
