@@ -1,4 +1,4 @@
-lib = {crate-type = ["staticlib"]}
+# lib = {crate-type = ["staticlib"]}
 [package]
 name = "bookshelf_r"
 version = "0.1.0"

@@ -6,8 +6,8 @@ use std::env;
 // use malduit::optimizer;
 // use bookshelf_r;
 // use crate::bookshelf::BookshelfCircuit;
-mod bookshelf;
-mod marklist;
+pub mod bookshelf;
+pub mod marklist;
 
 fn main() {
     println!("Main program for bookshelf reader.\n");
