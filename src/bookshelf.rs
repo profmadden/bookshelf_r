@@ -17,9 +17,6 @@ use std::path::Path;
 
 const LDBG: bool = false;
 
-pub fn callme() {
-    println!("Call me");
-}
 
 // PinInstances are in the vector for the cells
 pub struct PinInstance {
@@ -121,6 +118,8 @@ impl BookshelfCircuit {
         bc.read_nodes(path.with_file_name(nodef).as_path());
         bc.read_nets(path.with_file_name(netf).as_path());
         bc.read_pl(path.with_file_name(plf).as_path());
+        bc.read_scl(path.with_file_name(sclf).as_path());
+
 
         if LDBG {
           println!("BC counter is {}", bc.counter);
@@ -325,6 +324,68 @@ impl BookshelfCircuit {
         0
     }
 
+    pub fn read_scl(&mut self, filepath: &Path) -> usize {
+        let f = File::open(filepath).unwrap();
+        let mut reader = BufReader::with_capacity(32000, f);
+        let line = BookshelfCircuit::getline(&mut reader).unwrap();
+        if LDBG { println!("First line of SCL file {}", line);}
+
+        let mut num_rows = 0;
+        let line = BookshelfCircuit::getline(&mut reader).unwrap();
+        if let Ok(nr) = scan_fmt!(&line, "Numrows : {d}", usize) {
+            println!("SCL has {} rows", nr);
+            num_rows = nr;
+        }
+
+        for row in 0..num_rows {
+
+            println!("Row {}", row);
+            // CoreRow Horizontal
+            let line = BookshelfCircuit::getline(&mut reader).unwrap();
+
+            // Coordinate : n 
+            let line = BookshelfCircuit::getline(&mut reader).unwrap();
+            if let Ok(crd) = scan_fmt!(&line, " Coordinate : {d}", u32) {
+                println!("  Coord {}", crd);
+            }
+            // Height : n
+            let line = BookshelfCircuit::getline(&mut reader).unwrap();
+            if let Ok(crd) = scan_fmt!(&line, " Height : {d}", u32) {
+              println!("  Height {}", crd);
+            }
+            // Sitewidth : n 
+            let line = BookshelfCircuit::getline(&mut reader).unwrap();
+            if let Ok(crd) = scan_fmt!(&line, " Sitewidth : {d}", u32) {
+                println!("  Sitewidth {}", crd);
+            }
+            // Sitespacing : n
+            let line = BookshelfCircuit::getline(&mut reader).unwrap();
+            if let Ok(crd) = scan_fmt!(&line, " Sitespacing : {d}", u32) {
+              println!("  Spacing {}", crd);
+            }
+            // Siteorient : n 
+            let line = BookshelfCircuit::getline(&mut reader).unwrap();
+            if let Ok(crd) = scan_fmt!(&line, " Siteorient : {s}", String) {
+                println!("  Orient {}", crd);
+            }
+            // Sitesymmetry : n
+            let line = BookshelfCircuit::getline(&mut reader).unwrap();
+            if let Ok(crd) = scan_fmt!(&line, " Sitesymmetry : {s}", String) {
+              println!("  Symmetry {}", crd);
+            }
+            // SubrowOrigin : n  Numsites : n
+            let line = BookshelfCircuit::getline(&mut reader).unwrap();
+            if let Ok((sro, ns)) = scan_fmt!(&line, " SubrowOrigin : {d} Numsites : {d}", u32, u32) {
+              println!("  SRO  {}  NS {}", sro, ns);
+            }
+
+            // End line
+            let line = BookshelfCircuit::getline(&mut reader).unwrap();
+        }
+        
+        0 
+    }
+
     pub fn summarize(&self) {
         println!("Circuit has {} cells", self.cells.len());
         for i in self.cells.len() - 10..self.cells.len() {
@@ -411,21 +472,6 @@ impl BookshelfCircuit {
         v
     }
 
-    pub fn min(v1: f32, v2: f32) -> f32 {
-        if v1 < v2 {
-            return v1;
-        }
-        v2
-    }
-
-
-    pub fn max(v1: f32, v2: f32) -> f32 {
-        if v1 > v2 {
-            return v1;
-        }
-        v2
-    }
-
     pub fn wl(&self) -> f32 {
         let mut total = 0.0;
         let mut counter = 10;
@@ -452,10 +498,10 @@ impl BookshelfCircuit {
                     ury = py;
                     first = false; 
                 } else {
-                    llx = BookshelfCircuit::min(llx, px);
-                    urx = BookshelfCircuit::max(urx, px);
-                    lly = BookshelfCircuit::min(lly, py);
-                    ury = BookshelfCircuit::max(ury, py);
+                    llx = llx.min(px);
+                    urx = urx.max(px);
+                    lly = lly.min(py);
+                    ury = ury.max(py);
                 }
             }
             let len = (urx - llx) + (ury - lly);
