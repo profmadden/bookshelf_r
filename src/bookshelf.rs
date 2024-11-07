@@ -1,5 +1,6 @@
 extern crate libc;
 use libc::c_char;
+use std::cmp;
 use std::collections::HashMap;
 use std::ffi::CStr;
 
@@ -14,6 +15,7 @@ use std::io::ErrorKind;
 use std::io::Write;
 use std::path::Path;
 
+const LDBG: bool = false;
 
 pub fn callme() {
     println!("Call me");
@@ -103,7 +105,9 @@ impl BookshelfCircuit {
         let mut reader = BufReader::with_capacity(32000, f);
         let line = BookshelfCircuit::getline(&mut reader).unwrap();
 
-        println!("Returned line {}", line);
+        if LDBG {
+          println!("Returned line {}", line);
+        }
 
         let parsed = sscanf::sscanf!(line, "RowBasedPlacement : {str} {str} {str} {str} {str}");
         let (nodef, netf, wtf, plf, sclf) = parsed.unwrap();
@@ -118,7 +122,9 @@ impl BookshelfCircuit {
         bc.read_nets(path.with_file_name(netf).as_path());
         bc.read_pl(path.with_file_name(plf).as_path());
 
-        println!("BC counter is {}", bc.counter);
+        if LDBG {
+          println!("BC counter is {}", bc.counter);
+        }
 
         bc
     }
@@ -140,13 +146,13 @@ impl BookshelfCircuit {
 
         let line = BookshelfCircuit::getline(&mut reader).unwrap();
         if let Ok((nn)) = scan_fmt!(&line, "NumNodes : {d}", i32) {
-            println!("Scan fmt worked, value is {}", nn);
+            if LDBG { println!("Scan fmt worked, value is {}", nn);}
             num_node = nn;
         }
 
         let line = BookshelfCircuit::getline(&mut reader).unwrap();
         if let Ok((nt)) = scan_fmt!(&line, "NumTerminals : {d}", i32) {
-            println!("Scan fmt worked, value is {}", nt);
+            if LDBG { println!("Scan fmt worked, value is {}", nt);}
             num_term = nt;
         }
 
@@ -208,13 +214,13 @@ impl BookshelfCircuit {
 
         let line = BookshelfCircuit::getline(&mut reader).unwrap();
         if let Ok((nn)) = scan_fmt!(&line, "NumNets : {d}", usize) {
-            println!("Scan fmt worked, value is {}", nn);
+            if LDBG { println!("Scan fmt worked, value is {}", nn);}
             num_nets = nn;
         }
 
         let line = BookshelfCircuit::getline(&mut reader).unwrap();
-        if let Ok((np)) = scan_fmt!(&line, "NumPins : {d}", usize) {
-            println!("Scan fmt worked, value is {}", np);
+        if let Ok(np) = scan_fmt!(&line, "NumPins : {d}", usize) {
+            if LDBG { println!("Scan fmt worked, value is {}", np);}
             num_pins = np;
         }
 
@@ -225,7 +231,7 @@ impl BookshelfCircuit {
             let line = BookshelfCircuit::getline(&mut reader).unwrap();
 
             if let Ok((nd, nn)) = scan_fmt!(&line, "NetDegree : {d} {}", usize, String) {
-                println!("Net {} degree {}", nn, nd);
+                if LDBG { println!("Net {} degree {}", nn, nd);}
                 let netnum = self.find_net(nn.clone());
                 let mut net = Net {
                     name: nn.clone(),
@@ -238,7 +244,7 @@ impl BookshelfCircuit {
                     let mut dy: f32 = 0.0;
 
                     let line = BookshelfCircuit::getline(&mut reader).unwrap();
-                    println!("Pin line {}", line);
+                    if LDBG { println!("Pin line {}", line);}
 
                     if let Ok((cn, sdir, colon, sdx, sdy)) = scan_fmt!(
                         &line,
@@ -250,7 +256,7 @@ impl BookshelfCircuit {
                         String
                     ) {
                         cellname = cn.clone();
-                        println!("PIN NAME {} sdx {} sdy {}", cellname, sdx, sdy);
+                        if LDBG { println!("PIN NAME {} sdx {} sdy {}", cellname, sdx, sdy);}
 
                         dx = sdx.parse().unwrap();
                         dy = sdy.parse().unwrap();
@@ -258,18 +264,24 @@ impl BookshelfCircuit {
                         cellname = cn.clone();
                     }
 
-                    println!("Create pin for cell {} at {} {}", cellname, dx, dy);
+                    if LDBG {println!("Create pin for cell {} at {} {}", cellname, dx, dy);}
                     let cidx = self.find_cell(cellname);
 
                     let pr = PinRef {
                         parentCell: cidx,
                         index: self.cells[cidx].pins.len(),
                     };
+                    // Move pin offsets so that they are relative to the
+                    // lower left corner of a cell.  When cell orientations
+                    // are changed, need to take this into account.
+                    let offx = self.cells[cidx].w / 2.0;
+                    let offy = self.cells[cidx].h / 2.0;
+
                     net.pins.push(pr);
                     let pi = PinInstance {
                         name: "".to_string(),
-                        dx: dx,
-                        dy: dy,
+                        dx: dx + offx,
+                        dy: dy + offy,
                         parentCell: cidx,
                         parentNet: nidx,
                     };
@@ -289,22 +301,23 @@ impl BookshelfCircuit {
         let mut reader = BufReader::with_capacity(32000, f);
 
         let line = BookshelfCircuit::getline(&mut reader).unwrap();
-        println!("First line of PL file {}", line);
+        if LDBG { println!("First line of PL file {}", line);}
 
         loop {
             let line = BookshelfCircuit::getline(&mut reader);
             match line {
                 Ok(l) => {
-                    println!("Read PL line {}", l);
+                    if LDBG { println!("Read PL line {}", l);}
                     if let Ok((cellname, x, y)) = scan_fmt!(&l, " {} {} {}", String, String, String) {
                         let cidx = self.find_cell(cellname);
                         self.cells[cidx].x = x.parse().unwrap();
                         self.cells[cidx].y = y.parse().unwrap();
-                        println!("  Locate cell at {} {}", self.cells[cidx].x, self.cells[cidx].y);
+                        if LDBG{ println!("  Locate cell at {} {}", self.cells[cidx].x, self.cells[cidx].y);}
                     }
                     
                 },
-                Err(e) => {
+                Err(_e) => {
+                    // End of file
                     return 0
                 }
             }
@@ -396,6 +409,63 @@ impl BookshelfCircuit {
         };
 
         v
+    }
+
+    pub fn min(v1: f32, v2: f32) -> f32 {
+        if v1 < v2 {
+            return v1;
+        }
+        v2
+    }
+
+
+    pub fn max(v1: f32, v2: f32) -> f32 {
+        if v1 > v2 {
+            return v1;
+        }
+        v2
+    }
+
+    pub fn wl(&self) -> f32 {
+        let mut total = 0.0;
+        let mut counter = 10;
+
+        for n in &self.nets {
+            if counter > 0 {
+                println!("WL for net {}", n.name);
+            }
+            let mut first = true;
+            let mut llx = 0.0;
+            let mut lly = 0.0;
+            let mut urx = 0.0;
+            let mut ury = 0.0;
+            for pref in &n.pins {
+                let px = self.cells[pref.parentCell].x + self.cells[pref.parentCell].pins[pref.index].dx;
+                let py = self.cells[pref.parentCell].y + self.cells[pref.parentCell].pins[pref.index].dy;
+                if counter > 0 {
+                    println!("Pinref cell {} pin {} at {} {}", self.cells[pref.parentCell].name, pref.index, px, py);
+                }
+                if first {
+                    llx = px;
+                    urx = px;
+                    lly = py;
+                    ury = py;
+                    first = false; 
+                } else {
+                    llx = BookshelfCircuit::min(llx, px);
+                    urx = BookshelfCircuit::max(urx, px);
+                    lly = BookshelfCircuit::min(lly, py);
+                    ury = BookshelfCircuit::max(ury, py);
+                }
+            }
+            let len = (urx - llx) + (ury - lly);
+            if counter > 0 {
+                println!("BBox {} {}   {} {}   len {} ", llx, lly, urx, ury, len);
+            }
+            counter = counter - 1;
+            total = total + len;
+        }
+        total as f32
     }
 }
 

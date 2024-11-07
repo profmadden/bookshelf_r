@@ -30,6 +30,8 @@ fn main() {
     if args.len() == 2 {
         let bc = crate::bookshelf::BookshelfCircuit::read_aux(args[1].clone());
         bc.summarize();
-        bookshelf::callme();
+
+        let wl = bc.wl();
+        println!("Wire length {}", wl);
     }
 }
