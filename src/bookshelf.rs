@@ -570,6 +570,11 @@ impl BookshelfCircuit {
         }
         total as f32
     }
+    pub fn pinloc(&self, pr: &PinRef) -> (f32, f32) {
+        let px = self.cellpos[pr.parentCell].x + self.cells[pr.parentCell].pins[pr.index].dx;
+        let py = self.cellpos[pr.parentCell].y + self.cells[pr.parentCell].pins[pr.index].dy;
+        (px, py)
+    }
 }
 
 
