@@ -17,19 +17,21 @@ use std::path::Path;
 
 const LDBG: bool = false;
 
+use crate::bbox;
+
 
 // PinInstances are in the vector for the cells
 pub struct PinInstance {
     pub name: String,
     pub dx: f32,
     pub dy: f32,
-    pub parentCell: usize,
-    pub parentNet: usize,
+    pub parent_cell: usize,
+    pub parent_net: usize,
 }
 
 // PinRefs are in the vector for the nets
 pub struct PinRef {
-    pub parentCell: usize,
+    pub parent_cell: usize,
     pub index: usize,
 }
 
@@ -69,11 +71,8 @@ pub struct Macro {
 
 pub struct Row {
     pub name: String,
-    pub llx: f32,
-    pub lly: f32,
-    pub urx: f32,
-    pub ury: f32,
-    pub siteSpacing: f32,
+    pub bounds: bbox::BBox,
+    pub site_spacing: f32,
 }
 
 pub struct BookshelfCircuit {
@@ -84,9 +83,9 @@ pub struct BookshelfCircuit {
     pub nets: Vec<Net>,
     pub macros: Vec<Macro>,
     pub rows: Vec<Row>,
-    pub cellMap: HashMap<String, usize>,
-    pub netMap: HashMap<String, usize>,
-    pub macroMap: HashMap<String, usize>,
+    pub cell_map: HashMap<String, usize>,
+    pub net_map: HashMap<String, usize>,
+    pub macro_map: HashMap<String, usize>,
 }
 
 pub fn add(left: u64, right: u64) -> u64 {
@@ -95,7 +94,7 @@ pub fn add(left: u64, right: u64) -> u64 {
 
 impl BookshelfCircuit {
     pub fn new() -> BookshelfCircuit {
-        let mut bc = BookshelfCircuit {
+        let bc = BookshelfCircuit {
             counter: 0,
             cells: Vec::new(),
             cellpos: Vec::new(),
@@ -103,9 +102,9 @@ impl BookshelfCircuit {
             nets: Vec::new(),
             macros: Vec::new(),
             rows: Vec::new(),
-            cellMap: HashMap::new(),
-            netMap: HashMap::new(),
-            macroMap: HashMap::new(),
+            cell_map: HashMap::new(),
+            net_map: HashMap::new(),
+            macro_map: HashMap::new(),
         };
 
         bc
@@ -294,7 +293,7 @@ impl BookshelfCircuit {
                     let cidx = self.find_cell(cellname);
 
                     let pr = PinRef {
-                        parentCell: cidx,
+                        parent_cell: cidx,
                         index: self.cells[cidx].pins.len(),
                     };
                     // Move pin offsets so that they are relative to the
@@ -308,8 +307,8 @@ impl BookshelfCircuit {
                         name: "".to_string(),
                         dx: dx + offx,
                         dy: dy + offy,
-                        parentCell: cidx,
-                        parentNet: nidx,
+                        parent_cell: cidx,
+                        parent_net: nidx,
                     };
                     self.cells[cidx].pins.push(pi);
                 }
@@ -351,6 +350,18 @@ impl BookshelfCircuit {
         0
     }
 
+    pub fn write_pl(&self, filepath: String, annotate: &Vec<String>) {
+        let mut f = File::create(filepath).unwrap();
+        writeln!(&mut f, "UCLA pl 1.0").unwrap();
+        for s in annotate {
+            writeln!(&mut f, "# {}", s).unwrap();
+        }
+        for i in 0..self.cells.len() {
+            let c = &self.cells[i];
+            writeln!(&mut f, "{}  {} {}", c.name, self.cellpos[i].x, self.cellpos[i].y).unwrap();
+        }
+    }
+
     pub fn read_scl(&mut self, filepath: &Path) -> usize {
         let f = File::open(filepath).unwrap();
         let mut reader = BufReader::with_capacity(32000, f);
@@ -366,7 +377,7 @@ impl BookshelfCircuit {
 
         for row in 0..num_rows {
 
-            println!("Row {}", row);
+            if LDBG {println!("Row {}", row);}
             // CoreRow Horizontal
             let line = BookshelfCircuit::getline(&mut reader).unwrap();
 
@@ -382,57 +393,56 @@ impl BookshelfCircuit {
             // Coordinate : n 
             let line = BookshelfCircuit::getline(&mut reader).unwrap();
             if let Ok(crd) = scan_fmt!(&line, " Coordinate : {d}", f32) {
-                println!("  Coord {}", crd);
+                if LDBG {println!("  Coord {}", crd);}
                 coordinate = crd;
             }
             // Height : n
             let line = BookshelfCircuit::getline(&mut reader).unwrap();
             if let Ok(ht) = scan_fmt!(&line, " Height : {d}", f32) {
-              println!("  Height {}", ht);
+              if LDBG {println!("  Height {}", ht);}
               height = ht;
             }
             // Sitewidth : n 
             let line = BookshelfCircuit::getline(&mut reader).unwrap();
             if let Ok(sw) = scan_fmt!(&line, " Sitewidth : {d}", f32) {
-                println!("  Sitewidth {}", sw);
+                if LDBG {println!("  Sitewidth {}", sw);}
                 sitewidth = sw;
             }
             // Sitespacing : n
             let line = BookshelfCircuit::getline(&mut reader).unwrap();
             if let Ok(ss) = scan_fmt!(&line, " Sitespacing : {d}", f32) {
-              println!("  Spacing {}", ss);
+              if LDBG {println!("  Spacing {}", ss);}
               sitespacing = ss;
             }
             // Siteorient : n 
             let line = BookshelfCircuit::getline(&mut reader).unwrap();
             if let Ok(so) = scan_fmt!(&line, " Siteorient : {s}", String) {
-                println!("  Orient {}", so);
+                if LDBG {println!("  Orient {}", so);}
                 orient = 0;
             }
             // Sitesymmetry : n
             let line = BookshelfCircuit::getline(&mut reader).unwrap();
             if let Ok(sym) = scan_fmt!(&line, " Sitesymmetry : {s}", String) {
-              println!("  Symmetry {}", sym);
+              if LDBG {println!("  Symmetry {}", sym);}
               symmetry = 0;
             }
             // SubrowOrigin : n  Numsites : n
             let line = BookshelfCircuit::getline(&mut reader).unwrap();
             if let Ok((sro, ns)) = scan_fmt!(&line, " SubrowOrigin : {d} Numsites : {d}", f32, f32) {
-              println!("  SRO  {}  NS {}", sro, ns);
+              if LDBG {println!("  SRO  {}  NS {}", sro, ns);}
               origin = sro;
               numsites = ns;
             }
 
             // End line
-            let line = BookshelfCircuit::getline(&mut reader).unwrap();
-
+            let _line = BookshelfCircuit::getline(&mut reader).unwrap();
+            let mut bounds = bbox::BBox::new();
+            bounds.addpoint(origin, coordinate);
+            bounds.addpoint(origin + numsites * sitewidth, coordinate + height);
             self.rows.push(Row {
                 name: "row".to_string(),
-                llx: origin,
-                lly: coordinate,
-                urx: origin + numsites * sitewidth,
-                ury: coordinate + height,
-                siteSpacing: sitespacing,
+                bounds: bounds,
+                site_spacing: sitespacing,
             });
         }
         
@@ -449,13 +459,13 @@ impl BookshelfCircuit {
             for p in &self.cells[i].pins {
                 println!(
                     "  Pin at {} {} net {}",
-                    p.dx, p.dy, self.nets[p.parentNet].name
+                    p.dx, p.dy, self.nets[p.parent_net].name
                 );
             }
         }
         for rn in 0..6.min(self.rows.len()) {
             println!("Row {}  ({}, {}) to ({}, {})", rn,
-        self.rows[rn].llx, self.rows[rn].lly, self.rows[rn].urx, self.rows[rn].ury);
+            self.rows[rn].bounds.llx, self.rows[rn].bounds.lly, self.rows[rn].bounds.urx, self.rows[rn].bounds.ury);
         }
     }
 
@@ -495,35 +505,35 @@ impl BookshelfCircuit {
                 }
             };
         }
-        std::result::Result::Err(Error::new(ErrorKind::Other, "No match"))
+        // std::result::Result::Err(Error::new(ErrorKind::Other, "No match"))
     }
 
     fn find_cell(&mut self, newstr: String) -> usize {
-        let v = self.cellMap.len();
-        let entry = self.cellMap.get(&newstr);
+        let v = self.cell_map.len();
+        let entry = self.cell_map.get(&newstr);
         match entry {
             Some(rv) => return *rv,
-            None => self.cellMap.insert(newstr.clone(), v),
+            None => self.cell_map.insert(newstr.clone(), v),
         };
 
         v
     }
     fn find_net(&mut self, newstr: String) -> usize {
-        let v = self.netMap.len();
-        let entry = self.netMap.get(&newstr);
+        let v = self.net_map.len();
+        let entry = self.net_map.get(&newstr);
         match entry {
             Some(rv) => return *rv,
-            None => self.netMap.insert(newstr.clone(), v),
+            None => self.net_map.insert(newstr.clone(), v),
         };
 
         v
     }
     fn find_macro(&mut self, newstr: String) -> usize {
-        let v = self.macroMap.len();
-        let entry = self.macroMap.get(&newstr);
+        let v = self.macro_map.len();
+        let entry = self.macro_map.get(&newstr);
         match entry {
             Some(rv) => return *rv,
-            None => self.macroMap.insert(newstr.clone(), v),
+            None => self.macro_map.insert(newstr.clone(), v),
         };
 
         v
@@ -531,7 +541,7 @@ impl BookshelfCircuit {
 
     pub fn wl(&self) -> f32 {
         let mut total = 0.0;
-        let mut counter = 10;
+        let mut counter = 0;
 
         for n in &self.nets {
             if counter > 0 {
@@ -543,10 +553,10 @@ impl BookshelfCircuit {
             let mut urx = 0.0;
             let mut ury = 0.0;
             for pref in &n.pins {
-                let px = self.cellpos[pref.parentCell].x + self.cells[pref.parentCell].pins[pref.index].dx;
-                let py = self.cellpos[pref.parentCell].y + self.cells[pref.parentCell].pins[pref.index].dy;
+                let px = self.cellpos[pref.parent_cell].x + self.cells[pref.parent_cell].pins[pref.index].dx;
+                let py = self.cellpos[pref.parent_cell].y + self.cells[pref.parent_cell].pins[pref.index].dy;
                 if counter > 0 {
-                    println!("Pinref cell {} pin {} at {} {}", self.cells[pref.parentCell].name, pref.index, px, py);
+                    println!("Pinref cell {} pin {} at {} {}", self.cells[pref.parent_cell].name, pref.index, px, py);
                 }
                 if first {
                     llx = px;
@@ -570,11 +580,20 @@ impl BookshelfCircuit {
         }
         total as f32
     }
+    pub fn core(&self) -> bbox::BBox {
+        let mut result = bbox::BBox::new();
+        for r in &self.rows {
+            result.expand(&r.bounds);
+        }
+        result
+    }
     pub fn pinloc(&self, pr: &PinRef) -> (f32, f32) {
-        let px = self.cellpos[pr.parentCell].x + self.cells[pr.parentCell].pins[pr.index].dx;
-        let py = self.cellpos[pr.parentCell].y + self.cells[pr.parentCell].pins[pr.index].dy;
+        let px = self.cellpos[pr.parent_cell].x + self.cells[pr.parent_cell].pins[pr.index].dx;
+        let py = self.cellpos[pr.parent_cell].y + self.cells[pr.parent_cell].pins[pr.index].dy;
         (px, py)
     }
+   
+  
 }
 
 
