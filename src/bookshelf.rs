@@ -20,6 +20,8 @@ const LDBG: bool = false;
 use crate::bbox;
 use crate::point;
 
+use std::fmt;
+
 
 // PinInstances are in the vector for the cells
 pub struct PinInstance {
@@ -94,6 +96,12 @@ pub struct BookshelfCircuit {
 
 pub fn add(left: u64, right: u64) -> u64 {
     left + right
+}
+
+impl fmt::Display for BookshelfCircuit {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "name {} cells, {} nets, core {}, HPWL {}", self.cells.len(), self.nets.len(), self.core(), self.wl())
+    }
 }
 
 impl BookshelfCircuit {
