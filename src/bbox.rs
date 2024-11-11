@@ -1,3 +1,5 @@
+use std::fmt;
+use crate::point;
 
 #[derive(Copy, Clone)]
 pub struct BBox {
@@ -6,6 +8,13 @@ pub struct BBox {
     pub lly: f32,
     pub urx: f32,
     pub ury: f32,
+}
+
+
+impl fmt::Display for BBox {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "[({}, {}) - ({}, {})]", self.llx, self.lly, self.urx, self.ury)
+    }
 }
 
 impl BBox {
@@ -40,6 +49,12 @@ impl BBox {
     }
     pub fn dy(&self) -> f32 {
         self.ury - self.lly
+    }
+    pub fn center(&self) -> point::Point {
+        point::Point {
+            x: (self.urx + self.llx)/ 2.0,
+            y: (self.ury + self.lly)/ 2.0,
+        }
     }
     pub fn expand(&mut self, other: &BBox) {
         self.llx = self.llx.min(other.llx);

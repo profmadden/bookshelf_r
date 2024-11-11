@@ -18,6 +18,7 @@ use std::path::Path;
 const LDBG: bool = false;
 
 use crate::bbox;
+use crate::point;
 
 
 // PinInstances are in the vector for the cells
@@ -74,7 +75,10 @@ pub struct Row {
     pub bounds: bbox::BBox,
     pub site_spacing: f32,
 }
-
+pub struct Testme {
+    pub p: point::Point,
+    pub v: f32,
+}
 pub struct BookshelfCircuit {
     pub counter: i32,
     pub cells: Vec<Cell>,
