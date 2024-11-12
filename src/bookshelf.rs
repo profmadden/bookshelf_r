@@ -38,11 +38,6 @@ pub struct PinRef {
     pub index: usize,
 }
 
-pub struct Location {
-    pub x: f32,
-    pub y: f32,
-    // pub orientation: u8,
-}
 
 pub struct Orientation {
     pub orient: u8,
@@ -84,7 +79,7 @@ pub struct Testme {
 pub struct BookshelfCircuit {
     pub counter: i32,
     pub cells: Vec<Cell>,
-    pub cellpos: Vec<Location>,
+    pub cellpos: Vec<point::Point>,
     pub orient: Vec<Orientation>,
     pub nets: Vec<Net>,
     pub macros: Vec<Macro>,
@@ -214,7 +209,7 @@ impl BookshelfCircuit {
 
                 self.cells.push(c);
 
-                let cp = Location {
+                let cp = point::Point {
                     x: 0.0,
                     y: 0.0,
                     // orientation: 0,
