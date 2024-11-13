@@ -53,6 +53,12 @@ pub struct Cell {
     pub terminal: bool,
 }
 
+impl Cell {
+    pub fn area(&self) -> f32 {
+        self.h * self.w
+    }
+}
+
 pub struct Net {
     pub name: String,
     pub pins: Vec<PinRef>,
@@ -115,6 +121,19 @@ impl BookshelfCircuit {
         };
 
         bc
+    }
+    pub fn cellweights(&self, cells:&Vec<usize>) -> f32 {
+        let mut total = 0.0;
+        for cell_id in cells {
+            total = total + self.cells[*cell_id].area();
+        }
+        total
+    }
+
+    // Set the cell position -- the point is the center, we adjust for lower left
+    pub fn set_cell_center(&mut self, cid: usize, loc: &point::Point) {
+        self.cellpos[cid].x = loc.x - self.cells[cid].w / 2.0;
+        self.cellpos[cid].y = loc.y - self.cells[cid].h / 2.0;
     }
 
     pub fn read_aux(filename: String) -> BookshelfCircuit {

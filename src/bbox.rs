@@ -13,7 +13,7 @@ pub struct BBox {
 
 impl fmt::Display for BBox {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "[({}, {}) - ({}, {})]", self.llx, self.lly, self.urx, self.ury)
+        write!(f, "[({}, {}) - ({}, {})]:{}", self.llx, self.lly, self.urx, self.ury, self.area())
     }
 }
 
