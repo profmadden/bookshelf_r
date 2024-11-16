@@ -8,6 +8,8 @@ use std::env;
 // use crate::bookshelf::BookshelfCircuit;
 pub mod bookshelf;
 pub mod marklist;
+pub mod bbox;
+pub mod point;
 
 fn main() {
     println!("Main program for bookshelf reader.\n");

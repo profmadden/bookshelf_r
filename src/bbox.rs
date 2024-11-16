@@ -1,6 +1,7 @@
 use std::fmt;
 use crate::point;
 
+
 #[derive(Copy, Clone)]
 pub struct BBox {
     pub valid: bool,

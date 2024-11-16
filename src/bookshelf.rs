@@ -17,10 +17,16 @@ use std::path::Path;
 
 const LDBG: bool = false;
 
+// mod crate::bbox;
+// mod point;
 use crate::bbox;
-use crate::point;
+use crate::point::Point;
+
+// use crate::point;
+
 
 use std::fmt;
+use pstools_r;
 
 
 // PinInstances are in the vector for the cells
@@ -79,13 +85,13 @@ pub struct Row {
     pub site_spacing: f32,
 }
 pub struct Testme {
-    pub p: point::Point,
+    pub p: crate::point::Point,
     pub v: f32,
 }
 pub struct BookshelfCircuit {
     pub counter: i32,
     pub cells: Vec<Cell>,
-    pub cellpos: Vec<point::Point>,
+    pub cellpos: Vec<crate::point::Point>,
     pub orient: Vec<Orientation>,
     pub nets: Vec<Net>,
     pub macros: Vec<Macro>,
@@ -122,6 +128,18 @@ impl BookshelfCircuit {
 
         bc
     }
+    pub fn postscript(&self, filename: String) {
+        let mut pst = pstools_r::PSTool::new();
+        pst.add_color(0.3, 0.4, 0.2, 1.0);
+        for i in 0..self.cells.len() {
+            pst.add_box(self.cellpos[i].x, self.cellpos[i].y,
+            self.cellpos[i].x + self.cells[i].w - 0.5,
+        self.cellpos[i].y + self.cells[i].h - 0.5);
+        }
+        
+        pst.generate(filename);
+    }
+
     pub fn cellweights(&self, cells:&Vec<usize>) -> f32 {
         let mut total = 0.0;
         for cell_id in cells {
@@ -131,7 +149,7 @@ impl BookshelfCircuit {
     }
 
     // Set the cell position -- the point is the center, we adjust for lower left
-    pub fn set_cell_center(&mut self, cid: usize, loc: &point::Point) {
+    pub fn set_cell_center(&mut self, cid: usize, loc: &crate::point::Point) {
         self.cellpos[cid].x = loc.x - self.cells[cid].w / 2.0;
         self.cellpos[cid].y = loc.y - self.cells[cid].h / 2.0;
     }
@@ -228,7 +246,7 @@ impl BookshelfCircuit {
 
                 self.cells.push(c);
 
-                let cp = point::Point {
+                let cp = crate::point::Point {
                     x: 0.0,
                     y: 0.0,
                     // orientation: 0,
