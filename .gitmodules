@@ -1,0 +1,3 @@
+[submodule "libs/pstools_r"]
+	path = libs/pstools_r
+	url = https://github.com/profmadden/pstools_r.git
