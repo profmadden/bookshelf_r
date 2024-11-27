@@ -9,5 +9,5 @@ edition = "2021"
 libc = "0.2.159"
 scan_fmt = "0.2.6"
 sscanf = "0.4.2"
-pstools_r = {path = "libs/pstools_r"}
+pstools_r = {git = "https://github.com/profmadden/pstools_r"}
 # malduit = {path = "malduit"}
