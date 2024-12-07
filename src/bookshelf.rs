@@ -495,23 +495,41 @@ impl BookshelfCircuit {
     }
 
     pub fn summarize(&self) {
-        println!("Circuit has {} cells, {} rows", self.cells.len(), self.rows.len());
-        for i in self.cells.len() - 10..self.cells.len() {
-            println!(
-                "Cell {} size {} x {}",
-                self.cells[i].name, self.cells[i].w, self.cells[i].h
-            );
-            for p in &self.cells[i].pins {
-                println!(
-                    "  Pin at {} {} net {}",
-                    p.dx, p.dy, self.nets[p.parent_net].name
-                );
+        println!("---- CIRCUIT SUMMARY INFORMATION ----");
+        println!("Circuit has {} cells, {} nets, {} rows", self.cells.len(), self.cells.len(), self.rows.len());
+        let mut tot_pads = 0;
+        let mut tot_area = 0.0;
+        for c in &self.cells {
+            if c.terminal {
+                tot_pads = tot_pads + 1;
+            } else {
+                tot_area = tot_area + c.area();
             }
         }
-        for rn in 0..6.min(self.rows.len()) {
-            println!("Row {}  ({}, {}) to ({}, {})", rn,
-            self.rows[rn].bounds.llx, self.rows[rn].bounds.lly, self.rows[rn].bounds.urx, self.rows[rn].bounds.ury);
+
+        let mut tot_row_area = 0.0;
+        for r in &self.rows {
+            tot_row_area = tot_row_area + r.bounds.area();
         }
+        println!("{} pads.\nTotal cell area: {}\nTotal row area: {}\nUtilization: {}", tot_pads, tot_area, tot_row_area, tot_area/tot_row_area);
+        println!("Wire length: {}", self.wl());
+        println!("---------------");
+        // for i in self.cells.len() - 10..self.cells.len() {
+        //     println!(
+        //         "Cell {} size {} x {}",
+        //         self.cells[i].name, self.cells[i].w, self.cells[i].h
+        //     );
+        //     for p in &self.cells[i].pins {
+        //         println!(
+        //             "  Pin at {} {} net {}",
+        //             p.dx, p.dy, self.nets[p.parent_net].name
+        //         );
+        //     }
+        // }
+        // for rn in 0..6.min(self.rows.len()) {
+        //     println!("Row {}  ({}, {}) to ({}, {})", rn,
+        //     self.rows[rn].bounds.llx, self.rows[rn].bounds.lly, self.rows[rn].bounds.urx, self.rows[rn].bounds.ury);
+        // }
     }
 
     fn getline(reader: &mut BufReader<File>) -> std::io::Result<String> {
