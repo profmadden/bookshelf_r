@@ -154,6 +154,12 @@ impl BookshelfCircuit {
         self.cellpos[cid].y = loc.y - self.cells[cid].h / 2.0;
     }
 
+    pub fn set_cell_centers(&mut self, cells: &Vec<usize>, loc: &point::Point) {
+        for cid in cells {
+            self.set_cell_center(*cid, loc);
+        }
+    }
+
     pub fn read_aux(filename: String) -> BookshelfCircuit {
         let f = File::open(filename.clone()).unwrap();
         let mut reader = BufReader::with_capacity(32000, f);
