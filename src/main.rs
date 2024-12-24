@@ -11,29 +11,45 @@ pub mod marklist;
 use pstools_r::bbox;
 use pstools_r::point;
 
+use argh::FromArgs;
+#[derive(FromArgs)]
+/// Bookshelf template reader
+struct Args {
+    /// aux file
+    #[argh(option, short = 'a')]
+    aux: Option<String>,
+
+    /// block packing
+    #[argh(switch, short = 'b')]
+    block: bool,
+}
+
 fn main() {
     println!("Main program for bookshelf reader.\n");
-    let args: Vec<String> = env::args().collect();
-
-    // optimizer::maltest();
-
-    let mut ml = marklist::MarkList::new(40);
-    // marklist::ml::mark(4);
-    ml.mark(4);
-    ml.mark(3);
-    ml.mark(4);
-    ml.mark(3);
-    ml.dump();
-    ml.clear();
-    ml.mark(33);
-    ml.mark(4);
-    ml.dump();
     
-    if args.len() == 2 {
-        let bc = crate::bookshelf::BookshelfCircuit::read_aux(args[1].clone());
+    let arguments: Args = argh::from_env();
+    let auxname;
+    match arguments.aux {
+        Some(b) => {
+            auxname = b;
+        },
+        _ => {println!("Specify a Bookshelf file name"); return;},
+    }
+
+
+    if !arguments.block {
+        let bc = crate::bookshelf::BookshelfCircuit::read_aux(auxname.clone());
         bc.summarize();
 
         let wl = bc.wl();
         println!("Wire length {}", wl);
+    } else {
+        println!("Read input as block packing.");
+        let bc = crate::bookshelf::BookshelfCircuit::read_blockpacking(auxname);
+        bc.summarize();
+        bc.postscript("blockplacement.ps".to_string());
+        // for i in 0..bc.cells.len() {
+            // println!("Cell {} at {} {}", bc.cells[i].name, bc.cellpos[i].x, bc.cellpos[i].y);
+        // }
     }
 }

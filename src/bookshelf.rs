@@ -130,13 +130,33 @@ impl BookshelfCircuit {
     }
     pub fn postscript(&self, filename: String) {
         let mut pst = pstools_r::PSTool::new();
-        pst.set_color(0.3, 0.4, 0.2, 1.0);
-        for i in 0..self.cells.len() {
-            pst.add_box(self.cellpos[i].x, self.cellpos[i].y,
-            self.cellpos[i].x + self.cells[i].w - 0.5,
-        self.cellpos[i].y + self.cells[i].h - 0.5);
-        }
         
+        // Terminals n the background
+        pst.set_color(1.0, 0.3, 0.3, 1.0);
+        for i in 0..self.cells.len() {
+            if self.cells[i].terminal {
+                // pst.add_text(self.cellpos[i].x, self.cellpos[i].y, self.cells[i].name.clone());
+                pst.add_box(self.cellpos[i].x - 1.0, self.cellpos[i].y - 1.0,
+                        self.cellpos[i].x + self.cells[i].w + 1.0,
+                        self.cellpos[i].y + self.cells[i].h + 1.0);
+            }
+        }
+        pst.set_color(0.1, 0.1, 0.8, 1.0);
+        for i in 0..self.cells.len() {
+            if !self.cells[i].terminal {
+                // pst.add_text(self.cellpos[i].x, self.cellpos[i].y, self.cells[i].name.clone());
+                pst.add_box(self.cellpos[i].x + 0.25, self.cellpos[i].y + 0.25,
+                        self.cellpos[i].x + self.cells[i].w - 0.5,
+                        self.cellpos[i].y + self.cells[i].h - 0.5);
+            }
+        }
+        pst.set_color(0.1, 0.1, 0.0, 1.0);
+        for i in 0..self.cells.len() {
+            if !self.cells[i].terminal {
+                pst.add_text(self.cellpos[i].x + 1.0, self.cellpos[i].y + 1.0, self.cells[i].name.clone());
+            }
+        }        
+        pst.set_border(40.0);
         pst.generate(filename);
     }
 
@@ -197,8 +217,8 @@ impl BookshelfCircuit {
         let f = File::open(filepath).unwrap();
         let mut reader = BufReader::with_capacity(32000, f);
 
-        let line = BookshelfCircuit::getline(&mut reader).unwrap();
-        println!("First line of nodes file {}", line);
+        let _line = BookshelfCircuit::getline(&mut reader).unwrap();
+        // println!("First line of nodes file {}", line);
 
         self.counter = self.counter + 1;
 
@@ -279,7 +299,7 @@ impl BookshelfCircuit {
         let mut reader = BufReader::with_capacity(32000, f);
 
         let line = BookshelfCircuit::getline(&mut reader).unwrap();
-        println!("First line of nets file {}", line);
+        if LDBG {println!("First line of nets file {}", line);}
 
         self.counter = self.counter + 1;
 
@@ -299,11 +319,13 @@ impl BookshelfCircuit {
             num_pins = np;
         }
 
-        println!("Nets file has {} nets, {} pins", num_nets, num_pins);
+        if LDBG {println!("Nets file has {} nets, {} pins", num_nets, num_pins);}
         self.nets = Vec::with_capacity(num_nets);
 
         for nidx in 0..num_nets {
-            let line = BookshelfCircuit::getline(&mut reader).unwrap();
+            let line1 = BookshelfCircuit::getline(&mut reader).unwrap();
+            // Hack the line format -- block packing examples don't have net names?
+            let line = format!("{} _net{}", line1, nidx);
 
             if let Ok((nd, nn)) = scan_fmt!(&line, "NetDegree : {d} {}", usize, String) {
                 if LDBG { println!("Net {} degree {}", nn, nd);}
@@ -384,10 +406,10 @@ impl BookshelfCircuit {
                 Ok(l) => {
                     if LDBG { println!("Read PL line {}", l);}
                     if let Ok((cellname, x, y)) = scan_fmt!(&l, " {} {} {}", String, String, String) {
-                        let cidx = self.find_cell(cellname);
+                        let cidx = self.find_cell(cellname.clone());
                         self.cellpos[cidx].x = x.parse().unwrap();
                         self.cellpos[cidx].y = y.parse().unwrap();
-                        if LDBG{ println!("  Locate cell at {} {}", self.cellpos[cidx].x, self.cellpos[cidx].y);}
+                        if LDBG{ println!("  Locate cell {} idx {} at {} {}", cellname, cidx, self.cellpos[cidx].x, self.cellpos[cidx].y);}
                     }
                     
                 },
@@ -502,7 +524,7 @@ impl BookshelfCircuit {
 
     pub fn summarize(&self) {
         println!("---- CIRCUIT SUMMARY INFORMATION ----");
-        println!("Circuit has {} cells, {} nets, {} rows", self.cells.len(), self.cells.len(), self.rows.len());
+        println!("Circuit has {} cells, {} nets, {} rows", self.cells.len(), self.nets.len(), self.rows.len());
         let mut tot_pads = 0;
         let mut tot_area = 0.0;
         for c in &self.cells {
@@ -656,13 +678,130 @@ impl BookshelfCircuit {
         }
         result
     }
+    pub fn mincore(&self) -> bbox::BBox {
+        let mut core = self.core();
+        let mut total = 0.0;
+        for i in 0..self.cells.len() {
+            if self.cells[i].terminal == false {
+                total = total + self.cells[i].area();
+            }
+        }
+        let core_area = core.area();
+        let utilization = total / core_area;
+        let scale = utilization.sqrt();
+
+        let dx = core.dx() * scale;
+        let dy = core.dy() * scale;
+
+        let offset_x = (core.dx() - dx) * 0.5;
+        let offset_y = (core.dy() - dy) * 0.5;
+
+        let mut mincore = core;
+        mincore.llx = mincore.llx + offset_x;
+        mincore.lly = mincore.lly + offset_y;
+        mincore.urx = mincore.llx + dx;
+        mincore.ury = mincore.lly + dy;
+
+        println!("Minimum core: {} --> {}", core, mincore);
+
+        mincore
+    }
     pub fn pinloc(&self, pr: &PinRef) -> (f32, f32) {
         let px = self.cellpos[pr.parent_cell].x + self.cells[pr.parent_cell].pins[pr.index].dx;
         let py = self.cellpos[pr.parent_cell].y + self.cells[pr.parent_cell].pins[pr.index].dy;
         (px, py)
     }
-   
-  
+
+    pub fn read_blockpacking(filename: String) -> BookshelfCircuit {
+        let f = File::open(filename.clone()).unwrap();
+        let mut reader = BufReader::with_capacity(32000, f);
+        let line = BookshelfCircuit::getline(&mut reader).unwrap();
+
+        if LDBG {
+          println!("Returned line {}", line);
+        }
+
+        let parsed = sscanf::sscanf!(line, "BlockPacking : {str} {str} {str}");
+        let (blockf, netf, plf) = parsed.unwrap();
+
+        println!("Block file {}", blockf);
+
+        let path = Path::new(&filename);
+        
+        let mut bc = BookshelfCircuit::new();
+        bc.read_blocknodes(path.with_file_name(blockf).as_path());
+        bc.read_nets(path.with_file_name(netf).as_path());
+        bc.read_pl(path.with_file_name(plf).as_path());
+
+        bc
+    }
+
+    pub fn read_blocknodes(&mut self, filepath: &Path) {
+        let f = File::open(filepath).unwrap();
+        let mut reader = BufReader::with_capacity(32000, f);
+
+        let mut numsoft = 0;
+        let mut numhard = 0;
+        let mut numterm = 0;
+        
+        loop {
+            let line = BookshelfCircuit::getline(&mut reader);
+            match line {
+                Ok(l) => {
+                    if LDBG {println!("Read nodes line {}", l);}
+                    if let Ok(ns) = scan_fmt!(&l, "NumSoftRectangularBlocks : {}", u32) {
+                        println!("Got {} soft blocks", ns);
+                        numsoft = ns;
+                    }
+                    if let Ok((bname, corners, x0, y0, x1, y1, x2, y2, x3, y3)) = scan_fmt!(&l, "{} hardrectilinear {} ({}, {}) ({}, {}) ({}, {}) ({}, {})",
+                                          String, u32, f32, f32, f32, f32, f32, f32, f32, f32) {
+                        if LDBG {println!("Got hard macro {}", bname);}
+                        let cn = self.find_cell(bname.clone());
+
+                        let w = x2 - x0;
+                        let h = y2 - y0;
+                        let c = Cell {
+                            name: bname,
+                            w: w,
+                            h: h,
+                            pins: Vec::new(),
+                            terminal: false,
+                        };
+                        self.cells.push(c);
+                        let cp = point::Point{
+                            x: 0.0,
+                            y: 0.0,
+                        };
+                        self.cellpos.push(cp);
+                        self.orient.push(Orientation {orient: 0});
+                    }
+                    if let Ok(tname) = scan_fmt!(&l, "{} terminal", String) {
+                        if LDBG {println!("Got terminal {}", tname);}
+                        let cn = self.find_cell(tname.clone());
+
+                        self.cells.push(Cell {
+                            name: tname,
+                            w: 1.0,
+                            h: 1.0,
+                            pins: Vec::new(),
+                            terminal: true,
+                        });
+                        self.cellpos.push(point::Point {
+                            x: 0.0,
+                            y: 0.0,
+                        });
+                        self.orient.push(Orientation{ orient: 0});
+                    }
+                },
+                _ => {
+                    return;
+                }
+
+            }
+        }
+    }   
+
+     
 }
 
 
