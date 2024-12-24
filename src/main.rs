@@ -43,6 +43,7 @@ fn main() {
 
         let wl = bc.wl();
         println!("Wire length {}", wl);
+        bc.postscript("standardcell.ps".to_string());
     } else {
         println!("Read input as block packing.");
         let bc = crate::bookshelf::BookshelfCircuit::read_blockpacking(auxname);
