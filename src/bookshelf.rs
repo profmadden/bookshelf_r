@@ -180,7 +180,7 @@ impl BookshelfCircuit {
         }
     }
 
-    pub fn read_aux(filename: String) -> BookshelfCircuit {
+    pub fn read_aux(filename: &String) -> BookshelfCircuit {
         let f = File::open(filename.clone()).unwrap();
         let mut reader = BufReader::with_capacity(32000, f);
         let line = BookshelfCircuit::getline(&mut reader).unwrap();
