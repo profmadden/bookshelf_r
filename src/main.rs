@@ -38,7 +38,7 @@ fn main() {
 
 
     if !arguments.block {
-        let bc = crate::bookshelf::BookshelfCircuit::read_aux(auxname.clone());
+        let bc = crate::bookshelf::BookshelfCircuit::read_aux(&auxname.clone());
         bc.summarize();
 
         let wl = bc.wl();
