@@ -805,6 +805,213 @@ impl BookshelfCircuit {
 }
 
 
+use crate::marklist;
+use std::os::raw::{c_int, c_uint, c_ulong};
+
+pub struct HyperParams {
+    pub cellmark: marklist::MarkList,
+    pub netmark: marklist::MarkList,
+    pub horizontal: bool,
+    pub split_point: f32,
+    pub partition: Vec<c_int>,
+    pub bias: f32,
+    pub k: u32,
+    pub term_prop: bool,
+    pub passes: usize,
+    pub seed: usize,
+}
+
+impl HyperParams {
+    pub fn new(ckt: &BookshelfCircuit) -> HyperParams {
+        HyperParams {
+            cellmark: marklist::MarkList::new(ckt.cells.len()),
+            netmark: marklist::MarkList::new(ckt.nets.len()),
+            horizontal: false,
+            split_point: 0.0,
+            partition: vec![-1; ckt.cells.len()],
+            bias: 0.5,
+            k: 2,
+            term_prop: true,
+            passes: 1,
+            seed: 8675309,
+        }
+    }
+}
+
+pub struct HyperGraph {
+    pub vtxwt: Vec<c_int>,
+    pub hewt: Vec<c_int>,
+    pub part: Vec<c_int>,
+    pub eind: Vec<c_ulong>,
+    pub eptr: Vec<c_uint>,
+}
+
+pub fn hypergraph(ckt: &BookshelfCircuit, cells: &Vec<usize>, params: &mut HyperParams) -> HyperGraph {
+    HyperGraph {
+        vtxwt: Vec::new(),
+        hewt: Vec::new(),
+        part: Vec::new(),
+        eind: Vec::new(),
+        eptr: Vec::new()
+    }
+}
+
+impl HyperGraph {
+    pub fn new() -> HyperGraph {
+        HyperGraph {
+            vtxwt: Vec::new(),
+            hewt: Vec::new(),
+            part: Vec::new(),
+            eind: Vec::new(),
+            eptr: Vec::new()
+        }        
+    }
+    pub fn build_graph(ckt: &BookshelfCircuit, cells: &Vec<usize>, params: &mut HyperParams) -> HyperGraph {
+        params.cellmark.clear();
+        params.netmark.clear();
+        // println!("Split {} cells, total weight {}", cells.len(), ckt.cellweights(cells));
+        let mut warned = false;
+
+        let mut hg = HyperGraph::new();
+
+        for i in 0..cells.len() {
+            if params.cellmark.marked[cells[i]] {
+                println!("Cell already marked!");
+            }
+            params.cellmark.mark(cells[i]);
+            let cell_id = params.cellmark.list[i];
+            // Mark all connected nets
+
+            let cell = &ckt.cells[cell_id];
+            // println!("Marking cell {} with {} pins", cell.name, cell.pins.len());
+            for pininstance in &cell.pins {
+            let net_id = pininstance.parent_net;
+            params.netmark.mark(net_id);
+            }
+        }
+        // println!("Marked {} nets", params.netmark.list.len());
+        let mut cardinality = vec![0; params.netmark.list.len()];
+        let mut sinks = vec![false; params.netmark.list.len()];
+        let mut sources = vec![false; params.netmark.list.len()];
+
+        // let mut propagated = 0;
+
+        for net_id in &params.netmark.list {
+            // println!(" Marked net {} {}", nidx, ckt.nets[*nidx].name);
+            for pr in &ckt.nets[*net_id].pins {
+                // println!("  Ref cell {} marked: {}", pr.parentCell, cellmark.marked[pr.parentCell]);
+                if params.cellmark.marked[pr.parent_cell] {
+                    cardinality[params.netmark.index[*net_id]] = cardinality[params.netmark.index[*net_id]] + 1;
+                } else {
+                    if (params.term_prop) {
+                        let (px, py) = ckt.pinloc(pr);
+                        // Check with horizontal, vertical, set the sinks
+                        let split_value;
+                        if params.horizontal {
+                            split_value = py;
+                        } else {
+                            split_value = px;
+                        }
+                
+                        if split_value < params.split_point {
+                            sources[params.netmark.index[*net_id]] = true;
+                        } else {
+                            sinks[params.netmark.index[*net_id]] = true;
+                        }
+                    }
+                }
+            }
+            // Add to propagated if we need to
+            if cardinality[params.netmark.index[*net_id]] == 0 {
+                if !warned {
+                    println!("Net {} was marked, but not detected", net_id);
+                    warned = true;
+
+                    for cell_id in 0..cells.len() {
+                        for pininstance in &ckt.cells[cell_id].pins {
+                            if *net_id == pininstance.parent_net {
+                                println!("FOUND cell {} mark {}", cell_id, params.cellmark.marked[cell_id]);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        //let mut vtxwt: Vec<c_int> = Vec::new();
+        //let mut hewt: Vec<c_int> = Vec::new();
+        //let mut part: Vec<c_int> = Vec::new();
+        hg.vtxwt.clear();
+        hg.hewt.clear();
+        hg.part.clear();
+
+        // Put the cells onto the list
+        let mut tot_area = 0.0;
+        for cell_id in &params.cellmark.list {
+            let cell = &ckt.cells[*cell_id];
+            hg.vtxwt.push(cell.area() as c_int);
+            tot_area = tot_area + cell.area();
+            // vtxwt.push(1 as c_int);
+            // println!("Added cell  {} index {} h {} w {}", cell.name, *c, cell.h, cell.w);
+            hg.part.push(-1);
+        }
+        // println!("Partitioner total vtxw area: {} with {} marked cells", tot_area, params.cellmark.list.len());
+
+        // Now go through the nets -- and we'll add sinks and sources as we
+        // go along as needed
+        // let mut eind: Vec<c_ulong> = Vec::new();
+        hg.eind.clear();
+        let mut totfix = 0;
+        hg.eind.push(0 as c_ulong);
+        // let mut eptr: Vec<c_uint> = Vec::new();
+        let mut tot_prop = 0;
+        for net_id in &params.netmark.list {
+            let mut card = 0;
+
+            for pr in &ckt.nets[*net_id].pins {
+                if params.cellmark.marked[pr.parent_cell] {
+                    hg.eptr.push(params.cellmark.index[pr.parent_cell] as c_uint);
+                    card = card + 1;
+                }
+            }
+            let mut wt = 10;
+            if sources[params.netmark.index[*net_id]] || sinks[params.netmark.index[*net_id]] {
+                wt = 2;
+            }
+            if card < 3 {
+                wt = wt + 1;
+            }
+            hg.hewt.push(1 as c_int);
+
+            // Maybe push the source and sink -- and add vertex weights of zero
+            // for these, and make them partition location -1
+            if sources[params.netmark.index[*net_id]] {
+                hg.eptr.push(hg.vtxwt.len() as u32);
+                hg.part.push(0);
+                hg.vtxwt.push(1);
+                totfix = totfix + 1;
+                card = card + 1;
+                tot_prop = tot_prop + 1;
+            }
+            if sinks[params.netmark.index[*net_id]] {
+                hg.eptr.push(hg.vtxwt.len() as u32);
+                hg.part.push(1);
+                hg.vtxwt.push(1);
+                totfix = totfix + 1;
+                card = card + 1;
+                tot_prop = tot_prop + 1;
+            }
+
+            // Now push the eptr that ends this (it'll be the eptr for the next net)
+            hg.eind.push(hg.eptr.len() as c_ulong);
+            if card < 2 && params.term_prop && !warned {
+                println!("Cardinality {} net {} source {} sink {}", card, params.netmark.index[*net_id], sources[params.netmark.index[*net_id]], sinks[params.netmark.index[*net_id]]);
+                warned = true;
+            }
+        }
+        // println!("{} propagated terminals", tot_prop);
+        hg
+    }
+}
 
 
 
