@@ -19,14 +19,14 @@ const LDBG: bool = false;
 
 // mod crate::bbox;
 // mod point;
-use pstools_r::bbox;
-use pstools_r::point;
+use pstools::bbox;
+use pstools::point;
 
 // use crate::point;
 
 
 use std::fmt;
-use pstools_r;
+use pstools;
 
 
 // PinInstances are in the vector for the cells
@@ -129,7 +129,7 @@ impl BookshelfCircuit {
         bc
     }
     pub fn postscript(&self, filename: String) {
-        let mut pst = pstools_r::PSTool::new();
+        let mut pst = pstools::PSTool::new();
         
         // Terminals n the background
         pst.set_color(1.0, 0.3, 0.3, 1.0);

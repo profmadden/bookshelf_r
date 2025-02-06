@@ -8,8 +8,8 @@ use std::env;
 // use crate::bookshelf::BookshelfCircuit;
 pub mod bookshelf;
 pub mod marklist;
-use pstools_r::bbox;
-use pstools_r::point;
+use pstools::bbox;
+use pstools::point;
 
 use argh::FromArgs;
 #[derive(FromArgs)]
