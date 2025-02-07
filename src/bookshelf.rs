@@ -189,8 +189,8 @@ impl BookshelfCircuit {
           println!("Returned line {}", line);
         }
 
-        let parsed = sscanf::sscanf!(line, "RowBasedPlacement : {str} {str} {str} {str} {str}");
-        let (nodef, netf, wtf, plf, sclf) = parsed.unwrap();
+        let (nodef, netf, _wtf, plf, sclf) = scan_fmt!(&line, "RowBasedPlacement : {} {} {} {} {}", String, String, String, String, String).unwrap();
+
 
         println!("Node file {}", nodef);
 
@@ -212,7 +212,7 @@ impl BookshelfCircuit {
     }
 
     pub fn read_nodes(&mut self, filepath: &Path) -> usize {
-        // println!("Opening {}", filename);
+        println!("Opening {}", filepath.to_string_lossy());
 
         let f = File::open(filepath).unwrap();
         let mut reader = BufReader::with_capacity(32000, f);
