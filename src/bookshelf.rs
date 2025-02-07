@@ -191,7 +191,6 @@ impl BookshelfCircuit {
 
         let (nodef, netf, _wtf, plf, sclf) = scan_fmt!(&line, "RowBasedPlacement : {} {} {} {} {}", String, String, String, String, String).unwrap();
 
-
         println!("Node file {}", nodef);
 
         let path = Path::new(&filename);
