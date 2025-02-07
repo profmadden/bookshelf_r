@@ -442,9 +442,11 @@ impl BookshelfCircuit {
 
         let mut num_rows = 0;
         let line = BookshelfCircuit::getline(&mut reader).unwrap();
-        if let Ok(nr) = scan_fmt!(&line, "Numrows : {d}", usize) {
+        if let Ok(nr) = scan_fmt!(&line.to_lowercase(), "numrows : {d}", usize) {
             println!("SCL has {} rows", nr);
             num_rows = nr;
+        } else {
+            println!("Error on rows line {}", line)
         }
 
         for row in 0..num_rows {
@@ -500,7 +502,7 @@ impl BookshelfCircuit {
             }
             // SubrowOrigin : n  Numsites : n
             let line = BookshelfCircuit::getline(&mut reader).unwrap();
-            if let Ok((sro, ns)) = scan_fmt!(&line, " SubrowOrigin : {d} Numsites : {d}", f32, f32) {
+            if let Ok((sro, ns)) = scan_fmt!(&line.to_lowercase(), " subroworigin : {d} numsites : {d}", f32, f32) {
               if LDBG {println!("  SRO  {}  NS {}", sro, ns);}
               origin = sro;
               numsites = ns;
