@@ -6,10 +6,11 @@ use std::env;
 // use malduit::optimizer;
 // use bookshelf_r;
 // use crate::bookshelf::BookshelfCircuit;
-pub mod bookshelf;
-pub mod marklist;
+// pub mod bookshelf;
+// pub mod marklist;
 use pstools::bbox;
 use pstools::point;
+use metapartition::hypergraph::HyperGraph;
 
 use argh::FromArgs;
 #[derive(FromArgs)]
@@ -23,6 +24,8 @@ struct Args {
     #[argh(switch, short = 'b')]
     block: bool,
 }
+
+use bookshelf_r::bookshelf;
 
 fn main() {
     println!("Main program for bookshelf reader.\n");
@@ -38,12 +41,21 @@ fn main() {
 
 
     if !arguments.block {
-        let bc = crate::bookshelf::BookshelfCircuit::read_aux(&auxname.clone());
+        let bc = bookshelf::BookshelfCircuit::read_aux(&auxname.clone());
         bc.summarize();
 
         let wl = bc.wl();
         println!("Wire length {}", wl);
         bc.postscript("standardcell.ps".to_string());
+        let mut params = bookshelf_r::bookshelf::HyperParams::new(&bc);
+        let mut cells = Vec::new();
+        cells.push(0 as usize);
+
+        let hg = bc.build_graph(&cells, &mut params);
+        unsafe {
+            metapartition::kahypar_r::kahypar_hello();
+        }
+        
     } else {
         println!("Read input as block packing.");
         let bc = crate::bookshelf::BookshelfCircuit::read_blockpacking(auxname);

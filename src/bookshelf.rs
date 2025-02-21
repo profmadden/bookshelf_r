@@ -28,6 +28,8 @@ use pstools::point;
 use std::fmt;
 use pstools;
 
+use metapartition::hypergraph;
+
 
 // PinInstances are in the vector for the cells
 pub struct PinInstance {
@@ -823,7 +825,7 @@ pub struct HyperParams {
 }
 
 impl HyperParams {
-    pub fn new(ckt: &BookshelfCircuit) -> HyperParams {
+    pub fn new(ckt: &crate::bookshelf::BookshelfCircuit) -> HyperParams {
         HyperParams {
             cellmark: marklist::MarkList::new(ckt.cells.len()),
             netmark: marklist::MarkList::new(ckt.nets.len()),
@@ -839,13 +841,14 @@ impl HyperParams {
     }
 }
 
-pub struct HyperGraph {
-    pub vtxwt: Vec<c_int>,
-    pub hewt: Vec<c_int>,
-    pub part: Vec<c_int>,
-    pub eind: Vec<c_ulong>,
-    pub eptr: Vec<c_uint>,
-}
+// pub struct HyperGraph {
+//     pub vtxwt: Vec<c_int>,
+//     pub hewt: Vec<c_int>,
+//     pub part: Vec<c_int>,
+//     pub eind: Vec<c_ulong>,
+//     pub eptr: Vec<c_uint>,
+// }
+use metapartition::hypergraph::HyperGraph as HyperGraph;
 
 pub fn hypergraph(ckt: &BookshelfCircuit, cells: &Vec<usize>, params: &mut HyperParams) -> HyperGraph {
     HyperGraph {
@@ -857,17 +860,17 @@ pub fn hypergraph(ckt: &BookshelfCircuit, cells: &Vec<usize>, params: &mut Hyper
     }
 }
 
-impl HyperGraph {
-    pub fn new() -> HyperGraph {
-        HyperGraph {
-            vtxwt: Vec::new(),
-            hewt: Vec::new(),
-            part: Vec::new(),
-            eind: Vec::new(),
-            eptr: Vec::new()
-        }        
-    }
-    pub fn build_graph(ckt: &BookshelfCircuit, cells: &Vec<usize>, params: &mut HyperParams) -> HyperGraph {
+impl BookshelfCircuit {
+    // pub fn new() -> HyperGraph {
+    //     HyperGraph {
+    //         vtxwt: Vec::new(),
+    //         hewt: Vec::new(),
+    //         part: Vec::new(),
+    //         eind: Vec::new(),
+    //         eptr: Vec::new()
+    //     }        
+    // }
+    pub fn build_graph(&self, cells: &Vec<usize>, params: &mut HyperParams) -> HyperGraph {
         params.cellmark.clear();
         params.netmark.clear();
         // println!("Split {} cells, total weight {}", cells.len(), ckt.cellweights(cells));
@@ -883,7 +886,7 @@ impl HyperGraph {
             let cell_id = params.cellmark.list[i];
             // Mark all connected nets
 
-            let cell = &ckt.cells[cell_id];
+            let cell = &self.cells[cell_id];
             // println!("Marking cell {} with {} pins", cell.name, cell.pins.len());
             for pininstance in &cell.pins {
             let net_id = pininstance.parent_net;
@@ -899,13 +902,13 @@ impl HyperGraph {
 
         for net_id in &params.netmark.list {
             // println!(" Marked net {} {}", nidx, ckt.nets[*nidx].name);
-            for pr in &ckt.nets[*net_id].pins {
+            for pr in &self.nets[*net_id].pins {
                 // println!("  Ref cell {} marked: {}", pr.parentCell, cellmark.marked[pr.parentCell]);
                 if params.cellmark.marked[pr.parent_cell] {
                     cardinality[params.netmark.index[*net_id]] = cardinality[params.netmark.index[*net_id]] + 1;
                 } else {
                     if (params.term_prop) {
-                        let (px, py) = ckt.pinloc(pr);
+                        let (px, py) = self.pinloc(pr);
                         // Check with horizontal, vertical, set the sinks
                         let split_value;
                         if params.horizontal {
@@ -929,7 +932,7 @@ impl HyperGraph {
                     warned = true;
 
                     for cell_id in 0..cells.len() {
-                        for pininstance in &ckt.cells[cell_id].pins {
+                        for pininstance in &self.cells[cell_id].pins {
                             if *net_id == pininstance.parent_net {
                                 println!("FOUND cell {} mark {}", cell_id, params.cellmark.marked[cell_id]);
                             }
@@ -948,7 +951,7 @@ impl HyperGraph {
         // Put the cells onto the list
         let mut tot_area = 0.0;
         for cell_id in &params.cellmark.list {
-            let cell = &ckt.cells[*cell_id];
+            let cell = &self.cells[*cell_id];
             hg.vtxwt.push(cell.area() as c_int);
             tot_area = tot_area + cell.area();
             // vtxwt.push(1 as c_int);
@@ -968,7 +971,7 @@ impl HyperGraph {
         for net_id in &params.netmark.list {
             let mut card = 0;
 
-            for pr in &ckt.nets[*net_id].pins {
+            for pr in &self.nets[*net_id].pins {
                 if params.cellmark.marked[pr.parent_cell] {
                     hg.eptr.push(params.cellmark.index[pr.parent_cell] as c_uint);
                     card = card + 1;
@@ -1027,70 +1030,3 @@ mod tests {
     }
 }
 
-
-// DATABASE EXAMPLE
-// http://jakegoulding.com/rust-ffi-omnibus/objects/
-
-pub struct ZipCodeDatabase {
-    population: HashMap<String, u32>,
-}
-
-impl ZipCodeDatabase {
-    fn new() -> ZipCodeDatabase {
-        ZipCodeDatabase {
-            population: HashMap::new(),
-        }
-    }
-
-    fn populate(&mut self) {
-        for i in 0..100_000 {
-            let zip = format!("{:05}", i);
-            self.population.insert(zip, i);
-        }
-    }
-
-    fn population_of(&self, zip: &str) -> u32 {
-        self.population.get(zip).cloned().unwrap_or(0)
-    }
-}
-
-#[no_mangle]
-pub extern "C" fn zip_code_database_new() -> *mut ZipCodeDatabase {
-    Box::into_raw(Box::new(ZipCodeDatabase::new()))
-}
-
-#[no_mangle]
-pub extern "C" fn zip_code_database_free(ptr: *mut ZipCodeDatabase) {
-    if ptr.is_null() {
-        return;
-    }
-    unsafe {
-        Box::from_raw(ptr);
-    }
-}
-
-#[no_mangle]
-pub extern "C" fn zip_code_database_populate(ptr: *mut ZipCodeDatabase) {
-    let database = unsafe {
-        assert!(!ptr.is_null());
-        &mut *ptr
-    };
-    database.populate();
-}
-
-#[no_mangle]
-pub extern "C" fn zip_code_database_population_of(
-    ptr: *const ZipCodeDatabase,
-    zip: *const c_char,
-) -> u32 {
-    let database = unsafe {
-        assert!(!ptr.is_null());
-        &*ptr
-    };
-    let zip = unsafe {
-        assert!(!zip.is_null());
-        CStr::from_ptr(zip)
-    };
-    let zip_str = zip.to_str().unwrap();
-    database.population_of(zip_str)
-}
