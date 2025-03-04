@@ -1,17 +1,6 @@
-// use Bookshelf;
-// use crate::lib::BookshelfCircuit;
-// use bookshelf::BookshelfCircuit;
-use std::env;
-
-// use malduit::optimizer;
-// use bookshelf_r;
-// use crate::bookshelf::BookshelfCircuit;
+/// Bookshelf sample reader
 pub mod bookshelf;
 pub mod marklist;
-use bookshelf::WlCalc;
-use pstools::bbox;
-use pstools::point;
-use metapartition::hypergraph::HyperGraph;
 
 use argh::FromArgs;
 #[derive(FromArgs)]
@@ -50,18 +39,18 @@ fn main() {
         _ => {println!("Specify a Bookshelf file name"); return;},
     }
 
-    let mut bc;
+    let bc;
     if !arguments.block {
         println!("Bookshelf Standard Cell/Mixed Size reader");
-        bc = crate::bookshelf::BookshelfCircuit::read_aux(&auxname.clone());
+        bc = bookshelf::BookshelfCircuit::read_aux(&auxname.clone());
         bc.summarize();
     } else {
         println!("Bookshelf Block Packing Reader");
-        bc = crate::bookshelf::BookshelfCircuit::read_blockpacking(auxname);
+        bc = bookshelf::BookshelfCircuit::read_blockpacking(auxname);
         bc.summarize();
     }
     if arguments.cell.is_some() {
-        let mut wlc = crate::bookshelf::WlCalc::new(&bc);
+        let mut wlc = bookshelf::WlCalc::new(&bc);
         let cidx = bc.cell_index(&arguments.cell.unwrap().clone()).unwrap();
         println!("Cell index {} is {}", cidx, bc.cells[cidx].name);
         println!("Cell is {} by {} located at ({}, {})", bc.cells[cidx].w, bc.cells[cidx].h, bc.cellpos[cidx].x, bc.cellpos[cidx].y);
