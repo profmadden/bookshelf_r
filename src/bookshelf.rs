@@ -101,6 +101,36 @@ pub struct BookshelfCircuit {
     pub macro_map: HashMap<String, usize>,
 }
 
+pub struct WlCalc {
+    pub marked_nets: MarkList,
+}
+
+impl WlCalc {
+    pub fn new(bc: &BookshelfCircuit) -> WlCalc {
+        WlCalc {
+            marked_nets: MarkList::new(bc.nets.len())
+        }
+    }
+    pub fn add_cells(&mut self, bc: &BookshelfCircuit, cells: &Vec<usize>) {
+        for c in cells {
+            for p in &bc.cells[*c].pins {
+                self.marked_nets.mark(p.parent_net);
+            }
+        }
+    }
+    pub fn clear(&mut self) {
+        self.marked_nets.clear();
+    }
+    pub fn wl(&self, bc: &BookshelfCircuit) -> f32 {
+        let mut total = 0.0;
+        for n in &self.marked_nets.list {
+            total = total + bc.net_wl(&bc.nets[*n]);
+        }
+
+        total
+    }
+}
+
 pub fn add(left: u64, right: u64) -> u64 {
     left + right
 }
@@ -600,6 +630,14 @@ impl BookshelfCircuit {
         // std::result::Result::Err(Error::new(ErrorKind::Other, "No match"))
     }
 
+    pub fn cell_index(&self, name: &String) -> Option<usize> {
+        let entry = self.cell_map.get(name);
+        match entry {
+            Some(rv) => return Some(*rv),
+            _ => return None,
+        }
+    }
+
     fn find_cell(&mut self, newstr: String) -> usize {
         let v = self.cell_map.len();
         let entry = self.cell_map.get(&newstr);
@@ -610,6 +648,15 @@ impl BookshelfCircuit {
 
         v
     }
+
+    pub fn net_index(&self, name: &String) -> Option<usize> {
+        let entry = self.net_map.get(name);
+        match entry {
+            Some(rv) => return Some(*rv),
+            _ => return None,
+        }
+    }
+    
     fn find_net(&mut self, newstr: String) -> usize {
         let v = self.net_map.len();
         let entry = self.net_map.get(&newstr);
@@ -629,6 +676,33 @@ impl BookshelfCircuit {
         };
 
         v
+    }
+    pub fn net_wl(&self, n: &Net) -> f32 {
+        let mut first = true;
+        let mut llx = 0.0;
+        let mut lly = 0.0;
+        let mut urx = 0.0;
+        let mut ury = 0.0;
+        for pref in &n.pins {
+            let px = self.cellpos[pref.parent_cell].x + self.cells[pref.parent_cell].pins[pref.index].dx;
+            let py = self.cellpos[pref.parent_cell].y + self.cells[pref.parent_cell].pins[pref.index].dy;
+
+            if first {
+                llx = px;
+                urx = px;
+                lly = py;
+                ury = py;
+                first = false; 
+            } else {
+                llx = llx.min(px);
+                urx = urx.max(px);
+                lly = lly.min(py);
+                ury = ury.max(py);
+            }
+        }
+        let len = (urx - llx) + (ury - lly);    
+
+        len
     }
 
     pub fn wl(&self) -> f32 {
@@ -807,6 +881,7 @@ impl BookshelfCircuit {
 
 
 use crate::marklist;
+use crate::marklist::MarkList;
 use std::os::raw::{c_int, c_uint, c_ulong};
 
 pub struct HyperParams {
