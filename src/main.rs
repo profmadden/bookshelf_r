@@ -11,6 +11,7 @@ pub mod marklist;
 use bookshelf::WlCalc;
 use pstools::bbox;
 use pstools::point;
+use metapartition::hypergraph::HyperGraph;
 
 use argh::FromArgs;
 #[derive(FromArgs)]
