@@ -1,4 +1,6 @@
-/// Bookshelf sample reader
+//! Bookshelf sample reader
+//! Simple main program to demonstrate things.
+//! 
 pub mod bookshelf;
 pub mod marklist;
 
