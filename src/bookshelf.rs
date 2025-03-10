@@ -1,3 +1,21 @@
+//! The Bookshelf library contains functions to read and write
+//! GSRC bookshelf format circuits descriptions.  This is a
+//! fairly simple text format used in many academic research
+//! projects.
+//! 
+//! The BookshelfCircuit struct contains vectors of cells,
+//! and nets.  Cells contain PinInstnaces (the actual
+//! pin itself, with links to the parent cell and parent net).
+//! Nets contain PinRefs, which indicate the cell that a
+//! pin belongs to, along with the index into the list of
+//! pins on that cell.
+//! 
+//! Usize variables are used to index into the vectors.  The
+//! BookshelfCircuit structure also contains hash maps, enabling
+//! a lookup for the cell or net index from a string name.
+//! 
+//! The library utilizes metapartition -- to construct
+//! hypergraphs for a portion of a circuit, as needed.
 extern crate libc;
 use libc::c_char;
 use std::cmp;
@@ -133,9 +151,6 @@ impl WlCalc {
     }
 }
 
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
 
 impl fmt::Display for BookshelfCircuit {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -783,6 +798,33 @@ impl BookshelfCircuit {
 
         mincore
     }
+    pub fn leftcore(&self) -> bbox::BBox {
+        let mut core = self.core();
+        let mut total = 0.0;
+        for i in 0..self.cells.len() {
+            if self.cells[i].terminal == false {
+                total = total + self.cells[i].area();
+            }
+        }
+        let core_area = core.area();
+        let utilization = total / core_area;
+
+        let dx = core.dx() * utilization;
+        let dy = core.dy();
+
+        let offset_x = 0.0;
+        let offset_y = 0.0;
+
+        let mut leftcore = core;
+        leftcore.llx = leftcore.llx + offset_x;
+        leftcore.lly = leftcore.lly + offset_y;
+        leftcore.urx = leftcore.llx + dx;
+        leftcore.ury = leftcore.lly + dy;
+
+        println!("Left-aligned core: {} --> {}", core, leftcore);
+
+        leftcore   
+    }
     pub fn pinloc(&self, pr: &PinRef) -> (f32, f32) {
         let px = self.cellpos[pr.parent_cell].x + self.cells[pr.parent_cell].pins[pr.index].dx;
         let py = self.cellpos[pr.parent_cell].y + self.cells[pr.parent_cell].pins[pr.index].dy;
@@ -1100,8 +1142,6 @@ mod tests {
 
     #[test]
     fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
     }
 }
 
