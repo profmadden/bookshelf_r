@@ -1075,6 +1075,15 @@ impl BookshelfCircuit {
             // println!("Added cell  {} index {} h {} w {}", cell.name, *c, cell.h, cell.w);
             hg.part.push(-1);
         }
+
+        // Fixed source and sink vertex IDs
+        let src_id = hg.vtxwt.len();
+        hg.vtxwt.push(1);
+        hg.part.push(0);
+        let sink_id = hg.vtxwt.len();
+        hg.vtxwt.push(1);
+        hg.part.push(1);
+
         // println!("Partitioner total vtxw area: {} with {} marked cells", tot_area, params.cellmark.list.len());
 
         // Now go through the nets -- and we'll add sinks and sources as we
@@ -1094,29 +1103,31 @@ impl BookshelfCircuit {
                     card = card + 1;
                 }
             }
-            let mut wt = 10;
-            if sources[params.netmark.index[*net_id]] || sinks[params.netmark.index[*net_id]] {
-                wt = 2;
-            }
-            if card < 3 {
-                wt = wt + 1;
-            }
+            // let mut wt = 10;
+            // if sources[params.netmark.index[*net_id]] || sinks[params.netmark.index[*net_id]] {
+            //     wt = 2;
+            // }
+            // if card < 3 {
+            //     wt = wt + 1;
+            // }
             hg.hewt.push(1 as c_int);
 
             // Maybe push the source and sink -- and add vertex weights of zero
             // for these, and make them partition location -1
             if sources[params.netmark.index[*net_id]] {
-                hg.eptr.push(hg.vtxwt.len() as u32);
-                hg.part.push(0);
-                hg.vtxwt.push(1);
+                // hg.eptr.push(hg.vtxwt.len() as u32);
+                hg.eptr.push(src_id as u32);
+                //hg.part.push(0);
+                //hg.vtxwt.push(1);
                 totfix = totfix + 1;
                 card = card + 1;
                 tot_prop = tot_prop + 1;
             }
             if sinks[params.netmark.index[*net_id]] {
-                hg.eptr.push(hg.vtxwt.len() as u32);
-                hg.part.push(1);
-                hg.vtxwt.push(1);
+                //hg.eptr.push(hg.vtxwt.len() as u32);
+                hg.eptr.push(sink_id as u32);
+                //hg.part.push(1);
+                //hg.vtxwt.push(1);
                 totfix = totfix + 1;
                 card = card + 1;
                 tot_prop = tot_prop + 1;
