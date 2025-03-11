@@ -108,6 +108,23 @@ pub struct Testme {
     pub p: point::Point,
     pub v: f32,
 }
+
+/// A BookshelfCircuit contains the specifications for a
+/// circuit design -- cells, nets, and so on.  Cell positions
+/// are located in the cellpos field, and not directly with
+/// the cell, as they change often.
+/// 
+/// Cells and nets each have a unique ID (the index into
+/// the cells and nets arrays, respectively).  The BookshelfCircuit
+/// struct also has maps for finding the index of any text-named
+/// cell or net.
+/// 
+/// A notes field is included (for annotations that would appear
+/// in an output .pl file, or on a visual rendering of the circuit).
+/// Initial notes are created with the files are read in (aux file name,
+/// and the .pl file name).
+/// Command line arguments, date, and so on, are also reasonable notes to
+/// add.
 pub struct BookshelfCircuit {
     pub counter: i32,
     pub cells: Vec<Cell>,
@@ -119,6 +136,7 @@ pub struct BookshelfCircuit {
     pub cell_map: HashMap<String, usize>,
     pub net_map: HashMap<String, usize>,
     pub macro_map: HashMap<String, usize>,
+    pub notes: Vec<String>,
 }
 
 pub struct WlCalc {
@@ -171,6 +189,7 @@ impl BookshelfCircuit {
             cell_map: HashMap::new(),
             net_map: HashMap::new(),
             macro_map: HashMap::new(),
+            notes: Vec::new(),
         };
 
         bc
