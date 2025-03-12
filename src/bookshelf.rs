@@ -958,6 +958,7 @@ pub struct HyperParams {
     pub term_prop: bool,
     pub passes: usize,
     pub seed: usize,
+    pub edgeweight: usize, // Different edge weighting modes
 }
 
 impl HyperParams {
@@ -973,6 +974,7 @@ impl HyperParams {
             term_prop: true,
             passes: 1,
             seed: 8675309,
+            edgeweight: 0,
         }
     }
 }
@@ -1129,7 +1131,17 @@ impl BookshelfCircuit {
             // if card < 3 {
             //     wt = wt + 1;
             // }
-            hg.hewt.push(1 as c_int);
+            match params.edgeweight {
+                0 => { hg.hewt.push(1 as c_int);},
+                1 => {if sources[params.netmark.index[*net_id]] || sinks[params.netmark.index[*net_id]] {
+                        hg.hewt.push(6 as c_int);}
+                    else {
+                        hg.hewt.push(5 as c_int);
+                    }
+                    },
+                _ => { hg.hewt.push(1 as c_int);},
+            }
+            
 
             // Maybe push the source and sink -- and add vertex weights of zero
             // for these, and make them partition location -1
