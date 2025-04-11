@@ -1,6 +1,6 @@
 //! Bookshelf sample reader
 //! Simple main program to demonstrate things.
-//! 
+//!
 pub mod bookshelf;
 pub mod marklist;
 
@@ -31,14 +31,17 @@ struct Args {
 
 fn main() {
     println!("Main program for bookshelf reader.\n");
-    
+
     let arguments: Args = argh::from_env();
     let auxname;
     match arguments.aux {
         Some(b) => {
             auxname = b;
-        },
-        _ => {println!("Specify a Bookshelf file name"); return;},
+        }
+        _ => {
+            println!("Specify a Bookshelf file name");
+            return;
+        }
     }
 
     let bc;
@@ -55,20 +58,36 @@ fn main() {
         let mut wlc = bookshelf::WlCalc::new(&bc);
         let cidx = bc.cell_index(&arguments.cell.unwrap().clone()).unwrap();
         println!("Cell index {} is {}", cidx, bc.cells[cidx].name);
-        println!("Cell is {} by {} located at ({}, {})", bc.cells[cidx].w, bc.cells[cidx].h, bc.cellpos[cidx].x, bc.cellpos[cidx].y);
+        println!(
+            "Cell is {} by {} located at ({}, {})",
+            bc.cells[cidx].w, bc.cells[cidx].h, bc.cellpos[cidx].x, bc.cellpos[cidx].y
+        );
         wlc.add_cells(&bc, &vec![cidx]);
         for p in &bc.cells[cidx].pins {
-            println!("  Net {} {}  wire length {}", p.parent_net, bc.nets[p.parent_net].name, bc.net_wl(&bc.nets[p.parent_net]));
+            println!(
+                "  Net {} {}  wire length {}",
+                p.parent_net,
+                bc.nets[p.parent_net].name,
+                bc.net_wl(&bc.nets[p.parent_net])
+            );
         }
         println!("Connected net wire length {}", wlc.wl(&bc));
     }
     if arguments.net.is_some() {
         let nidx = bc.net_index(&arguments.net.unwrap().clone()).unwrap();
 
-        println!("Net {} {} wire length {}", nidx, bc.nets[nidx].name, bc.net_wl(&bc.nets[nidx]));
+        println!(
+            "Net {} {} wire length {}",
+            nidx,
+            bc.nets[nidx].name,
+            bc.net_wl(&bc.nets[nidx])
+        );
         for pr in &bc.nets[nidx].pins {
             let instance = &bc.cells[pr.parent_cell].pins[pr.index];
-            println!("  Cell {} index {} is pin offset {} {}", bc.cells[pr.parent_cell].name, pr.index, instance.dx, instance.dy);
+            println!(
+                "  Cell {} index {} is pin offset {} {}",
+                bc.cells[pr.parent_cell].name, pr.index, instance.dx, instance.dy
+            );
         }
     }
     if arguments.postscript.is_some() {

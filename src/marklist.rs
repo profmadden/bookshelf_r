@@ -3,14 +3,14 @@
 // as relevant, be able to tell if something has been marked, and if
 // it has been marked, map it to range of 0..number_marked
 pub struct MarkList {
-    pub len: usize,  // Number of elements, 0 to len-1
+    pub len: usize,        // Number of elements, 0 to len-1
     pub marked: Vec<bool>, // Marker that an item has been marked
-    pub list: Vec<usize>, // List of actively marked items
+    pub list: Vec<usize>,  // List of actively marked items
     pub index: Vec<usize>, // Index number of an item
 }
 
 impl MarkList {
-    pub fn new(len: usize) -> MarkList{
+    pub fn new(len: usize) -> MarkList {
         MarkList {
             len: len,
             marked: vec![false; len],

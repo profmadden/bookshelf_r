@@ -15,3 +15,8 @@ a good idea.
 Computing HPWL correctly, so it's all loaded in OK.
 May be time to start working on fsdc_r.
 
+### 20250411
+
+Fixing up the hypergraph creator, so that it doesn't
+add in extra terminals if terminal propagation is
+turned off.
