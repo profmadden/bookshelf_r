@@ -66,6 +66,36 @@ pub struct Orientation {
     pub orient: u8,
 }
 
+pub struct AltSize {
+    pub w: f32,
+    pub h: f32,
+}
+
+/// Some blocks and macros are soft, and can be
+/// resized.  Within a cell structure, the W and H
+/// fields are the size of any fixed instance,
+/// but it's possible to swap these out for
+/// alternative dimensions.
+/// 
+/// If the block is not marked soft, then the
+/// sizes listed within the alt_sizes vector are the
+/// only ones available.  If the block is soft, the
+/// width and height of the orignal block (which is
+/// the required area) can be used to generate
+/// alternate sizes for the block.
+/// 
+/// In the kujenga floor planner, an incoming block
+/// may have multiple sizes.  This allows reading in
+/// of a block packing file using the bookshelf circuit
+/// structure, and then generating a variety of block
+/// sizes when the floor planner runs.
+pub struct SoftSize {
+    pub soft: bool,
+    pub min_aspect: f32,
+    pub max_aspect: f32,
+    pub alt_sizes: Vec<AltSize>,
+}
+
 pub struct Cell {
     pub name: String,
     pub w: f32,
@@ -74,6 +104,7 @@ pub struct Cell {
     // pub y: f32,
     pub pins: Vec<PinInstance>,
     pub terminal: bool,
+    pub soft: Option<SoftSize>,
 }
 
 impl Cell {
@@ -358,6 +389,7 @@ impl BookshelfCircuit {
                     // y: 0.0,
                     pins: Vec::new(),
                     terminal: isterminal,
+                    soft: None,
                 };
 
                 self.cells.push(c);
@@ -1012,6 +1044,7 @@ impl BookshelfCircuit {
                             h: h,
                             pins: Vec::new(),
                             terminal: false,
+                            soft: None,
                         };
                         self.cells.push(c);
                         let cp = point::Point { x: 0.0, y: 0.0 };
@@ -1030,6 +1063,7 @@ impl BookshelfCircuit {
                             h: 1.0,
                             pins: Vec::new(),
                             terminal: true,
+                            soft: None,
                         });
                         self.cellpos.push(point::Point { x: 0.0, y: 0.0 });
                         self.orient.push(Orientation { orient: 0 });
