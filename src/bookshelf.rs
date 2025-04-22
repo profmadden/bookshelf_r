@@ -45,7 +45,8 @@ use pstools::point;
 use pstools;
 use std::fmt;
 
-use metapartition::hypergraph;
+// use metapartition::hypergraph;
+use hypergraph::hypergraph;
 
 // PinInstances are in the vector for the cells
 pub struct PinInstance {
@@ -1086,7 +1087,8 @@ impl HyperParams {
 //     pub eind: Vec<c_ulong>,
 //     pub eptr: Vec<c_uint>,
 // }
-use metapartition::hypergraph::HyperGraph;
+// use metapartition::hypergraph::HyperGraph;
+use hypergraph::HyperGraph;
 
 pub fn hypergraph(
     ckt: &BookshelfCircuit,
