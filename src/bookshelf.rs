@@ -48,22 +48,51 @@ use std::fmt;
 // use metapartition::hypergraph;
 use hypergraph::hypergraph;
 
-// PinInstances are in the vector for the cells
+/// PinInstances are in the vector for the cells
+#[derive(Clone)]
 pub struct PinInstance {
     pub name: String,
     pub dx: f32,
     pub dy: f32,
     pub parent_cell: usize,
     pub parent_net: usize,
+    pub details: Vec::<PinDetail>,
+}
+
+/// PinDetail has the original (non-rotated/translated)
+/// locations for each pin of a cell.  There may be multiple
+/// electrically equivalent pins; one of these is promoted
+/// and set for the cell itself.  
+#[derive(Copy,Clone)]
+pub struct PinDetail {
+    pub dx: f32,
+    pub dy: f32,
 }
 
 // PinRefs are in the vector for the nets
+#[derive(Copy,Clone)]
 pub struct PinRef {
     pub parent_cell: usize,
     pub index: usize,
 }
 
 pub struct Orientation {
+    pub orient: u8,
+}
+
+/// A cell has a XY location for the lower left
+/// corner, may have the X and Y axis swapped (rotated),
+/// and we can have the X or Y axis mirrored.  The
+/// orient field encodes all of this.  When we change the
+/// orientation of a cell, we should update the height and
+/// width of the cell instance, and the locations of
+/// each pin within the cell.  When doing placement, and
+/// optimizing wire length, we'll use the dx and dy positions
+/// directly from the pin instance.
+#[derive(Copy,Clone)]
+pub struct CellPos {
+    pub x: f32,
+    pub y: f32,
     pub orient: u8,
 }
 
@@ -110,7 +139,10 @@ pub struct Testme {
 /// A BookshelfCircuit contains the specifications for a
 /// circuit design -- cells, nets, and so on.  Cell positions
 /// are located in the cellpos field, and not directly with
-/// the cell, as they change often.
+/// the cell, as they change often.  refpos is similar to
+/// cellpos, and provides reference point information (for
+/// use in tracking abstract-to-legal placements, or in
+/// comparing two different placements of the same circuit).
 ///
 /// Cells and nets each have a unique ID (the index into
 /// the cells and nets arrays, respectively).  The BookshelfCircuit
@@ -125,8 +157,10 @@ pub struct Testme {
 /// add.
 pub struct BookshelfCircuit {
     pub counter: i32,
+    pub name: String,
     pub cells: Vec<Cell>,
     pub cellpos: Vec<point::Point>,
+    pub refpos: Vec<CellPos>,
     pub orient: Vec<Orientation>,
     pub nets: Vec<Net>,
     pub macros: Vec<Macro>,
@@ -135,6 +169,8 @@ pub struct BookshelfCircuit {
     pub net_map: HashMap<String, usize>,
     pub macro_map: HashMap<String, usize>,
     pub notes: Vec<String>,
+    pub unit_x: f32,
+    pub unit_y: f32,
 }
 
 pub struct WlCalc {
@@ -184,8 +220,10 @@ impl BookshelfCircuit {
     pub fn new() -> BookshelfCircuit {
         let bc = BookshelfCircuit {
             counter: 0,
+            name: "bookshelf_circuit".to_string(),
             cells: Vec::new(),
             cellpos: Vec::new(),
+            refpos: Vec::new(),
             orient: Vec::new(),
             nets: Vec::new(),
             macros: Vec::new(),
@@ -194,6 +232,8 @@ impl BookshelfCircuit {
             net_map: HashMap::new(),
             macro_map: HashMap::new(),
             notes: Vec::new(),
+            unit_x: 1.0,
+            unit_y: 1.0,
         };
 
         bc
@@ -485,6 +525,7 @@ impl BookshelfCircuit {
                         dy: dy + offy,
                         parent_cell: cidx,
                         parent_net: nidx,
+                        details: Vec::new(),
                     };
                     self.cells[cidx].pins.push(pi);
                 }
