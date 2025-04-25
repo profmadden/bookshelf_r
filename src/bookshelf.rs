@@ -45,7 +45,6 @@ use pstools::point;
 use pstools;
 use std::fmt;
 
-// use metapartition::hypergraph;
 use hypergraph::hypergraph;
 
 /// PinInstances are in the vector for the cells
@@ -80,20 +79,34 @@ pub struct Orientation {
     pub orient: u8,
 }
 
-/// A cell has a XY location for the lower left
-/// corner, may have the X and Y axis swapped (rotated),
-/// and we can have the X or Y axis mirrored.  The
-/// orient field encodes all of this.  When we change the
-/// orientation of a cell, we should update the height and
-/// width of the cell instance, and the locations of
-/// each pin within the cell.  When doing placement, and
-/// optimizing wire length, we'll use the dx and dy positions
-/// directly from the pin instance.
-#[derive(Copy,Clone)]
-pub struct CellPos {
-    pub x: f32,
-    pub y: f32,
-    pub orient: u8,
+pub struct AltSize {
+    pub w: f32,
+    pub h: f32,
+}
+
+/// Some blocks and macros are soft, and can be
+/// resized.  Within a cell structure, the W and H
+/// fields are the size of any fixed instance,
+/// but it's possible to swap these out for
+/// alternative dimensions.
+/// 
+/// If the block is not marked soft, then the
+/// sizes listed within the alt_sizes vector are the
+/// only ones available.  If the block is soft, the
+/// width and height of the orignal block (which is
+/// the required area) can be used to generate
+/// alternate sizes for the block.
+/// 
+/// In the kujenga floor planner, an incoming block
+/// may have multiple sizes.  This allows reading in
+/// of a block packing file using the bookshelf circuit
+/// structure, and then generating a variety of block
+/// sizes when the floor planner runs.
+pub struct SoftSize {
+    pub soft: bool,
+    pub min_aspect: f32,
+    pub max_aspect: f32,
+    pub alt_sizes: Vec<AltSize>,
 }
 
 pub struct Cell {
@@ -104,6 +117,7 @@ pub struct Cell {
     // pub y: f32,
     pub pins: Vec<PinInstance>,
     pub terminal: bool,
+    pub soft: Option<SoftSize>,
 }
 
 impl Cell {
@@ -160,7 +174,7 @@ pub struct BookshelfCircuit {
     pub name: String,
     pub cells: Vec<Cell>,
     pub cellpos: Vec<point::Point>,
-    pub refpos: Vec<CellPos>,
+    pub refpos: Option<Vec<point::Point>>,
     pub orient: Vec<Orientation>,
     pub nets: Vec<Net>,
     pub macros: Vec<Macro>,
@@ -223,7 +237,7 @@ impl BookshelfCircuit {
             name: "bookshelf_circuit".to_string(),
             cells: Vec::new(),
             cellpos: Vec::new(),
-            refpos: Vec::new(),
+            refpos: None,
             orient: Vec::new(),
             nets: Vec::new(),
             macros: Vec::new(),
@@ -328,8 +342,12 @@ impl BookshelfCircuit {
 
         bc.read_nodes(path.with_file_name(nodef).as_path());
         bc.read_nets(path.with_file_name(netf).as_path());
-        bc.read_pl(path.with_file_name(plf).as_path());
+        bc.read_pl(path.with_file_name(plf).as_path(), false);
         bc.read_scl(path.with_file_name(sclf).as_path());
+        if bc.rows.len() > 0 {
+            bc.unit_x = bc.rows[0].site_spacing;
+            bc.unit_y = bc.rows[0].bounds.dy();
+        }
 
         if LDBG {
             println!("BC counter is {}", bc.counter);
@@ -399,6 +417,7 @@ impl BookshelfCircuit {
                     // y: 0.0,
                     pins: Vec::new(),
                     terminal: isterminal,
+                    soft: None,
                 };
 
                 self.cells.push(c);
@@ -536,7 +555,7 @@ impl BookshelfCircuit {
         0
     }
 
-    pub fn read_pl(&mut self, filepath: &Path) -> usize {
+    pub fn read_pl(&mut self, filepath: &Path, reference: bool) -> usize {
         // println!("Opening {}", filename);
 
         let f = File::open(filepath).unwrap();
@@ -547,6 +566,11 @@ impl BookshelfCircuit {
             println!("First line of PL file {}", line);
         }
 
+        let mut refpos = Vec::new();
+        if reference {
+            refpos = self.cellpos.clone();
+        }
+        
         loop {
             let line = BookshelfCircuit::getline(&mut reader);
             match line {
@@ -557,22 +581,32 @@ impl BookshelfCircuit {
                     if let Ok((cellname, x, y)) = scan_fmt!(&l, " {} {} {}", String, String, String)
                     {
                         let cidx = self.find_cell(cellname.clone());
-                        self.cellpos[cidx].x = x.parse().unwrap();
-                        self.cellpos[cidx].y = y.parse().unwrap();
-                        if LDBG {
-                            println!(
-                                "  Locate cell {} idx {} at {} {}",
-                                cellname, cidx, self.cellpos[cidx].x, self.cellpos[cidx].y
-                            );
+                        if !reference {
+                            self.cellpos[cidx].x = x.parse().unwrap();
+                            self.cellpos[cidx].y = y.parse().unwrap();
+                            if LDBG {
+                                println!(
+                                    "  Locate cell {} idx {} at {} {}",
+                                    cellname, cidx, self.cellpos[cidx].x, self.cellpos[cidx].y
+                                );
+                            }
+                        } else {
+                            refpos[cidx].x = x.parse().unwrap();
+                            refpos[cidx].y = y.parse().unwrap();
                         }
+
                     }
                 }
                 Err(_e) => {
+                    if reference {
+                        self.refpos = Some(refpos);
+                    }
                     // End of file
                     return 0;
                 }
             }
         }
+
         0
     }
 
@@ -703,6 +737,19 @@ impl BookshelfCircuit {
         }
 
         0
+    }
+
+    pub fn cell_area(&self) -> f32 {
+        let mut tot_area = 0.0;
+        for c in &self.cells {
+            if c.terminal {
+                // tot_pads = tot_pads + 1;
+            } else {
+                tot_area = tot_area + c.area();
+            }
+        }
+
+        tot_area
     }
 
     pub fn summarize(&self) {
@@ -918,8 +965,16 @@ impl BookshelfCircuit {
     }
     pub fn core(&self) -> bbox::BBox {
         let mut result = bbox::BBox::new();
-        for r in &self.rows {
-            result.expand(&r.bounds);
+        if self.rows.len() > 1 {
+            for r in &self.rows {
+                result.expand(&r.bounds);
+            }
+        } else {
+            // If no rows are specified, we create a square core area.
+            let area = self.cell_area();
+            let side = area.sqrt() * 1.10;
+            result.addpoint(0.0, 0.0);
+            result.addpoint(side, side);
         }
         result
     }
@@ -1003,7 +1058,9 @@ impl BookshelfCircuit {
         let mut bc = BookshelfCircuit::new();
         bc.read_blocknodes(path.with_file_name(blockf).as_path());
         bc.read_nets(path.with_file_name(netf).as_path());
-        bc.read_pl(path.with_file_name(plf).as_path());
+        bc.read_pl(path.with_file_name(plf).as_path(), false);
+        bc.unit_x = 1.0;
+        bc.unit_y = 1.0;
 
         bc
     }
@@ -1054,6 +1111,7 @@ impl BookshelfCircuit {
                             h: h,
                             pins: Vec::new(),
                             terminal: false,
+                            soft: None,
                         };
                         self.cells.push(c);
                         let cp = point::Point { x: 0.0, y: 0.0 };
@@ -1072,6 +1130,7 @@ impl BookshelfCircuit {
                             h: 1.0,
                             pins: Vec::new(),
                             terminal: true,
+                            soft: None,
                         });
                         self.cellpos.push(point::Point { x: 0.0, y: 0.0 });
                         self.orient.push(Orientation { orient: 0 });
