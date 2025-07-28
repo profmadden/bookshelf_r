@@ -118,6 +118,7 @@ pub struct Cell {
     pub pins: Vec<PinInstance>,
     pub terminal: bool,
     pub soft: Option<SoftSize>,
+    is_macro: bool,
 }
 
 impl Cell {
@@ -185,6 +186,10 @@ pub struct BookshelfCircuit {
     pub notes: Vec<String>,
     pub unit_x: f32,
     pub unit_y: f32,
+    pub num_macros: usize,
+    pub num_terminals: usize,
+    pub num_cells: usize,
+    pub row_height: f32,
 }
 
 pub struct WlCalc {
@@ -248,6 +253,10 @@ impl BookshelfCircuit {
             notes: Vec::new(),
             unit_x: 1.0,
             unit_y: 1.0,
+            num_cells: 0,
+            num_macros: 0,
+            num_terminals: 0,
+            row_height: 0.0,
         };
 
         bc
@@ -347,7 +356,28 @@ impl BookshelfCircuit {
         if bc.rows.len() > 0 {
             bc.unit_x = bc.rows[0].site_spacing;
             bc.unit_y = bc.rows[0].bounds.dy();
+            bc.row_height = bc.unit_y;
         }
+        // Now go through and classify all the cell types
+        bc.num_cells = 0;
+        bc.num_macros = 0;
+        bc.num_terminals = 0;
+        for c in &mut bc.cells {
+            if c.terminal {
+                bc.num_terminals += 1;
+            } else {
+                if c.h > bc.row_height {
+                    bc.num_macros += 1;
+                    c.is_macro = true;
+                } else {
+                    bc.num_cells += 1;
+                    c.is_macro = false;
+                }
+            }
+        }
+
+        println!("Circuit read: {} cells, {} are terminals, {} are macros", bc.num_cells, bc.num_terminals, bc.num_macros);
+        println!("Row height: {}", bc.row_height);
 
         if LDBG {
             println!("BC counter is {}", bc.counter);
@@ -418,6 +448,7 @@ impl BookshelfCircuit {
                     pins: Vec::new(),
                     terminal: isterminal,
                     soft: None,
+                    is_macro: false,
                 };
 
                 self.cells.push(c);
@@ -1112,6 +1143,7 @@ impl BookshelfCircuit {
                             pins: Vec::new(),
                             terminal: false,
                             soft: None,
+                            is_macro: false,
                         };
                         self.cells.push(c);
                         let cp = point::Point { x: 0.0, y: 0.0 };
@@ -1131,6 +1163,7 @@ impl BookshelfCircuit {
                             pins: Vec::new(),
                             terminal: true,
                             soft: None,
+                            is_macro: false,
                         });
                         self.cellpos.push(point::Point { x: 0.0, y: 0.0 });
                         self.orient.push(Orientation { orient: 0 });
