@@ -118,7 +118,7 @@ pub struct Cell {
     pub pins: Vec<PinInstance>,
     pub terminal: bool,
     pub soft: Option<SoftSize>,
-    is_macro: bool,
+    pub is_macro: bool,
 }
 
 impl Cell {
