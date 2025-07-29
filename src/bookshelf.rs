@@ -33,6 +33,8 @@ use std::io::ErrorKind;
 use std::io::Write;
 use std::path::Path;
 
+use pstools::PSTool;
+
 const LDBG: bool = false;
 
 // mod crate::bbox;
@@ -175,6 +177,11 @@ pub struct BookshelfCircuit {
     pub name: String,
     pub cells: Vec<Cell>,
     pub cellpos: Vec<point::Point>,
+    /// Optional cell coloring scheme.  If present, each cell/macro
+    /// will be colored based on the index -- will need to implement
+    /// a basic color selection mechanism.
+    pub cell_color: Option<Vec<usize>>,
+    /// Optional reference position
     pub refpos: Option<Vec<point::Point>>,
     pub orient: Vec<Orientation>,
     pub nets: Vec<Net>,
@@ -242,6 +249,7 @@ impl BookshelfCircuit {
             name: "bookshelf_circuit".to_string(),
             cells: Vec::new(),
             cellpos: Vec::new(),
+            cell_color: None,
             refpos: None,
             orient: Vec::new(),
             nets: Vec::new(),
@@ -261,9 +269,7 @@ impl BookshelfCircuit {
 
         bc
     }
-    pub fn postscript(&self, filename: String) {
-        let mut pst = pstools::PSTool::new();
-
+    pub fn ps_terminals(&self, pst: &mut PSTool) {
         // Terminals n the background
         pst.set_color(1.0, 0.3, 0.3, 1.0);
         for i in 0..self.cells.len() {
@@ -277,7 +283,9 @@ impl BookshelfCircuit {
                 );
             }
         }
-        pst.set_color(0.1, 0.1, 0.8, 1.0);
+    }
+    pub fn ps_cells(&self, pst: &mut PSTool) {
+       pst.set_color(0.1, 0.1, 0.8, 1.0);
         for i in 0..self.cells.len() {
             if !self.cells[i].terminal {
                 // pst.add_text(self.cellpos[i].x, self.cellpos[i].y, self.cells[i].name.clone());
@@ -288,7 +296,9 @@ impl BookshelfCircuit {
                     self.cellpos[i].y + self.cells[i].h - 0.5,
                 );
             }
-        }
+        } 
+    }
+    pub fn ps_labels(&self, pst: &mut PSTool) {
         pst.set_color(0.1, 0.1, 0.0, 1.0);
         for i in 0..self.cells.len() {
             if !self.cells[i].terminal {
@@ -299,8 +309,29 @@ impl BookshelfCircuit {
                 );
             }
         }
+    }
+    pub fn ps_movement(&self, pst: &mut PSTool) {
+        if self.refpos.is_none() {
+            return;
+        }
+
+        pst.set_color(1.0, 0.0, 0.0, 1.0);
+        let rp = self.refpos.as_deref().unwrap();
+
+        for i  in 0..self.cells.len() {
+            // let rp: Option<pstools::point::Point> = self.refpos.as_ref()[i];
+            pst.add_line(self.cellpos[i].x, self.cellpos[i].y, rp[i].x, rp[i].y);
+        }
+    }
+    pub fn postscript(&self, filename: String) {
+        let mut pst = pstools::PSTool::new();
+
+        self.ps_terminals(&mut pst);
+        self.ps_cells(&mut pst);
+        self.ps_terminals(&mut pst);
+
         pst.set_border(40.0);
-        pst.generate(filename);
+        pst.generate(filename).unwrap();
     }
 
     pub fn cellweights(&self, cells: &Vec<usize>) -> f32 {
@@ -639,6 +670,14 @@ impl BookshelfCircuit {
         }
 
         0
+    }
+
+    /// Sets the refpos values to be the current locations.  Prior to making a
+    /// significant change to locations (legalization, for example), it may
+    /// be useful to make a snapshot of original locations, so that the
+    /// movement can be visualized.
+    pub fn set_refpos(&mut self) {
+        self.refpos = Some(self.cellpos.clone());
     }
 
     pub fn write_pl(&self, filepath: String, annotate: &Vec<String>) {
