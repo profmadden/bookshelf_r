@@ -121,6 +121,7 @@ pub struct Cell {
     pub terminal: bool,
     pub soft: Option<SoftSize>,
     pub is_macro: bool,
+    pub can_rotate: bool,
 }
 
 impl Cell {
@@ -480,6 +481,7 @@ impl BookshelfCircuit {
                     terminal: isterminal,
                     soft: None,
                     is_macro: false,
+                    can_rotate: false,
                 };
 
                 self.cells.push(c);
@@ -852,6 +854,7 @@ impl BookshelfCircuit {
             tot_area / tot_row_area
         );
         println!("Wire length: {}", self.wl());
+        println!("Cells: {} Macros: {} Terminals {}", self.num_cells, self.num_macros, self.num_terminals);
         println!("---------------");
         // for i in self.cells.len() - 10..self.cells.len() {
         //     println!(
@@ -1183,6 +1186,7 @@ impl BookshelfCircuit {
                             terminal: false,
                             soft: None,
                             is_macro: false,
+                            can_rotate: false,
                         };
                         self.cells.push(c);
                         let cp = point::Point { x: 0.0, y: 0.0 };
@@ -1203,6 +1207,7 @@ impl BookshelfCircuit {
                             terminal: true,
                             soft: None,
                             is_macro: false,
+                            can_rotate: true,
                         });
                         self.cellpos.push(point::Point { x: 0.0, y: 0.0 });
                         self.orient.push(Orientation { orient: 0 });
