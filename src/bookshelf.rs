@@ -354,6 +354,7 @@ impl BookshelfCircuit {
         }
 
         let range = max - min;
+        println!("WL contribution range {} to {}", max, min);
 
         let mut pst = pstools::PSTool::new();
         pst.set_fill(true);
