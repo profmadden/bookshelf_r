@@ -344,7 +344,7 @@ impl BookshelfCircuit {
         }
         let wl = self.wl();
         for c in 0..self.cells.len() {
-            impact[c] = impact[c]/wl;
+            impact[c] = (impact[c]/wl)/self.cells[c].area();
         }
         let mut max = impact[0];
         let mut min = impact[0];
