@@ -335,6 +335,38 @@ impl BookshelfCircuit {
         pst.generate(filename).unwrap();
     }
 
+    pub fn postscript_wl(&self, filename: String) {
+        let mut impact: Vec<f32> = vec![0.0 as f32; self.cells.len()];
+        for c in 0..self.cells.len() {
+            for p in &self.cells[c].pins {
+                impact[c] += self.net_wl(&self.nets[p.parent_net]);
+            }
+        }
+        let wl = self.wl();
+        for c in 0..self.cells.len() {
+            impact[c] = impact[c]/wl;
+        }
+        let mut max = impact[0];
+        let mut min = impact[0];
+        for c in 0..self.cells.len() {
+            max = max.max(impact[c]);
+            min = min.min(impact[c]);
+        }
+
+        let range = max - min;
+
+        let mut pst = pstools::PSTool::new();
+        pst.set_fill(true);
+        for c in 0..self.cells.len() {
+            let color = (impact[c] - min)/range;
+            pst.set_color(color, 0.0, 1.0 - color, 1.0);
+            pst.add_box(self.cellpos[c].x, self.cellpos[c].y, self.cellpos[c].x + self.cells[c].w, self.cellpos[c].y + self.cells[c].h);
+        }
+
+        pst.set_border(40.0);
+        pst.generate(filename).unwrap();
+    }
+
     pub fn cellweights(&self, cells: &Vec<usize>) -> f32 {
         let mut total = 0.0;
         for cell_id in cells {
