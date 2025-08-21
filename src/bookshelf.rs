@@ -580,7 +580,11 @@ impl BookshelfCircuit {
             writeln!(&mut f, "NetDegree : {} {}", net.pins.len(), net.name);
             for p in &net.pins {
                 let c = &self.cells[p.parent_cell];
-                writeln!(&mut f, " {} B : {} {}", c.name, c.w / 2.0, c.h / 2.0).unwrap();
+                // When we read a net in, the location is assumed to be relative to
+                // the center of the cell.  For the bookshelf reader, we add
+                // half cell width and height, so everything is relative to the
+                // lower left corner
+                writeln!(&mut f, " {} B : 0 0", c.name).unwrap();
             }
         }
     }
@@ -600,7 +604,10 @@ impl BookshelfCircuit {
             for p in &net.pins {
                 let c = &self.cells[p.parent_cell];
                 let pin = &c.pins[p.index];
-                writeln!(&mut f, " {} B : {:.1} {:.1}", c.name, pin.dx, pin.dy).unwrap();
+                // For truncation, the internal XY locations of the pin have been adjusted to
+                // be relative to lower left corner.  Have to subtract off half cell width and
+                // height to get the correct location in the NETS file.
+                writeln!(&mut f, " {} B : {:.1} {:.1}", c.name, pin.dx - c.w/2.0, pin.dy - c.h/2.0).unwrap();
             }
         }
     }
