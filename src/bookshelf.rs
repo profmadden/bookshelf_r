@@ -577,7 +577,7 @@ impl BookshelfCircuit {
         }
         writeln!(&mut f, "NumPins : {}", num_pins).unwrap();
         for net in &self.nets {
-            println!("NetDegree : {} {}", net.pins.len(), net.name);
+            writeln!(&mut f, "NetDegree : {} {}", net.pins.len(), net.name);
             for p in &net.pins {
                 let c = &self.cells[p.parent_cell];
                 writeln!(&mut f, " {} B : {} {}", c.name, c.w / 2.0, c.h / 2.0).unwrap();
