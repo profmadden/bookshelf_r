@@ -566,6 +566,25 @@ impl BookshelfCircuit {
 
     }
 
+    pub fn write_nets_center(&self, filepath: &String) {
+        let mut f = File::create(filepath).unwrap();
+        writeln!(&mut f, "UCLA nets 1.0").unwrap();
+        writeln!(&mut f, "# Pin Centering from bookshelf_r").unwrap();
+        writeln!(&mut f, "NumNets : {}", self.nets.len()).unwrap();
+        let mut num_pins = 0;
+        for net in &self.nets {
+            num_pins += net.pins.len();
+        }
+        writeln!(&mut f, "NumPins : {}", num_pins).unwrap();
+        for net in &self.nets {
+            println!("NetDegree : {} {}", net.pins.len(), net.name);
+            for p in &net.pins {
+                let c = &self.cells[p.parent_cell];
+                writeln!(&mut f, " {} B : {} {}", c.name, c.w / 2.0, c.h / 2.0).unwrap();
+            }
+        }
+    }
+
     pub fn read_nets(&mut self, filepath: &Path) -> usize {
         // println!("Opening {}", filename);
 
