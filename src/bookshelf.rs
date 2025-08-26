@@ -18,6 +18,7 @@
 //! hypergraphs for a portion of a circuit, as needed.
 extern crate libc;
 use libc::c_char;
+use pstools::bbox::BBox;
 use std::cmp;
 use std::collections::HashMap;
 use std::ffi::CStr;
@@ -1289,6 +1290,33 @@ impl BookshelfCircuit {
         println!("Left-aligned core: {} --> {}", core, leftcore);
 
         leftcore
+    }
+
+    pub fn expand(&mut self) {
+        let mut bb = BBox::new();
+        for i in 0..self.cells.len() {
+            if self.cells[i].terminal {
+                continue;
+            }
+            bb.addpoint(self.cellpos[i].x, self.cellpos[i].y);
+            bb.addpoint(self.cellpos[i].x + self.cells[i].w, self.cellpos[i].y + self.cells[i].w);
+        }
+        let width = bb.dx();
+        let offset = bb.llx - self.rows[0].bounds.llx;
+        // Amount of excess space
+        let space = self.rows[0].bounds.dx() - bb.dx();
+
+        // Now go through and distribute the space
+        for i in 0..self.cells.len() {
+            if self.cells[i].terminal {
+                continue;
+            }
+            // How far along the original spacing line
+            let x = self.cellpos[i].x + self.cells[i].w;
+            let ratio = x / width;
+            let movement = (ratio * space).round();
+            self.cellpos[i].x += movement - offset;
+        }
     }
     pub fn pinloc(&self, pr: &PinRef) -> (f32, f32) {
         let px = self.cellpos[pr.parent_cell].x + self.cells[pr.parent_cell].pins[pr.index].dx;
