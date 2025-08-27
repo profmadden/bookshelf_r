@@ -1305,7 +1305,9 @@ impl BookshelfCircuit {
         let offset = bb.llx - self.rows[0].bounds.llx;
         // Amount of excess space
         let space = self.rows[0].bounds.dx() - bb.dx();
-
+        self.notes.push(format!("Expanded with space {}", space));
+        self.notes.push(format!("Prior to expansion: {}", self.wl()));
+        
         // Now go through and distribute the space
         for i in 0..self.cells.len() {
             if self.cells[i].terminal {
