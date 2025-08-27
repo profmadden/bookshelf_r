@@ -836,7 +836,7 @@ impl BookshelfCircuit {
         }
         for i in 0..self.cells.len() {
             let c = &self.cells[i];
-            if c.is_macro {
+            if c.is_macro || c.terminal {
                 writeln!(
                     &mut f,
                     "{}  {} {} : N /FIXED",
