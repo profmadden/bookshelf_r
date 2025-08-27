@@ -867,7 +867,7 @@ impl BookshelfCircuit {
             if c.terminal {
                 writeln!(
                     &mut f,
-                    "{}  {} {} : {}",
+                    "{}  {} {} : {} /FIXED",
                     c.name, self.cellpos[i].x, self.cellpos[i].y, self.orient[i],
                 )
                 .unwrap();
