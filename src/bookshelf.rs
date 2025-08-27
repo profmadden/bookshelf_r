@@ -1307,7 +1307,7 @@ impl BookshelfCircuit {
         let space = self.rows[0].bounds.dx() - bb.dx();
         self.notes.push(format!("Expanded with space {}", space));
         self.notes.push(format!("Prior to expansion: {}", self.wl()));
-        
+
         // Now go through and distribute the space
         for i in 0..self.cells.len() {
             if self.cells[i].terminal {
@@ -1319,6 +1319,7 @@ impl BookshelfCircuit {
             let movement = (ratio * space).round();
             self.cellpos[i].x += movement - offset;
         }
+        self.notes.push(format!("After expansion: {}", self.wl()));
     }
     pub fn pinloc(&self, pr: &PinRef) -> (f32, f32) {
         let px = self.cellpos[pr.parent_cell].x + self.cells[pr.parent_cell].pins[pr.index].dx;
