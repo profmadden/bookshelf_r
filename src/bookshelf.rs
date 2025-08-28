@@ -846,7 +846,7 @@ impl BookshelfCircuit {
             } else {
                 writeln!(
                     &mut f,
-                    "{}  {} {}",
+                    "{}  {} {} : N",
                     c.name, self.cellpos[i].x, self.cellpos[i].y
                 )
                 .unwrap();
