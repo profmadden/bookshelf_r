@@ -300,12 +300,19 @@ impl BookshelfCircuit {
         for i in 0..self.cells.len() {
             if !self.cells[i].terminal {
                 // pst.add_text(self.cellpos[i].x, self.cellpos[i].y, self.cells[i].name.clone());
-                pst.add_box(
+                // pst.add_box(
+                //     self.cellpos[i].x + 0.25,
+                //     self.cellpos[i].y + 0.25,
+                //     self.cellpos[i].x + self.cells[i].w - 0.5,
+                //     self.cellpos[i].y + self.cells[i].h - 0.5,
+                // );
+                pst.add_postscript(format!(
+                    "{:.1} {:.1} {:.1} {:.1} box",
                     self.cellpos[i].x + 0.25,
                     self.cellpos[i].y + 0.25,
-                    self.cellpos[i].x + self.cells[i].w - 0.5,
-                    self.cellpos[i].y + self.cells[i].h - 0.5,
-                );
+                    self.cells[i].w - 0.5,
+                    self.cells[i].h - 0.5
+                ));
             }
         }
     }
@@ -334,12 +341,37 @@ impl BookshelfCircuit {
             pst.add_line(self.cellpos[i].x, self.cellpos[i].y, rp[i].x, rp[i].y);
         }
     }
+
+    pub fn ps_stats(&self, pst: &mut PSTool) {
+        // Scale  the font
+        let b = self.core();
+        let height = 0.01 * b.dy(); // Font height is 1% of core height, should give 100 lines of text if needed
+        pst.set_font(height, "Courier".to_string());
+        pst.set_text_ln(height, b.dy() - height);
+        pst.set_color(0.0, 0.0, 0.0, 1.0);
+        for n in &self.notes {
+            pst.add_text_ln(n.clone());
+        }
+        pst.add_text_ln(format!("HPWL: {}", self.wl()));
+        pst.add_text_ln(format!(
+            "{} cells, {} nets, {} rows",
+            self.cells.len(),
+            self.nets.len(),
+            self.rows.len()
+        ));
+        pst.add_text_ln(format!("Row height: {}", self.row_height));
+    }
     pub fn postscript(&self, filename: String) {
         let mut pst = pstools::PSTool::new();
-
+        pst.add_postscript("/box {/h 2 1 roll def /w 2 1 roll def /oy 2 1 roll def /ox 2 1 roll def newpath ox oy moveto".to_string());
+        pst.add_postscript("ox w add oy lineto".to_string());
+        pst.add_postscript("ox w add oy h add lineto".to_string());
+        pst.add_postscript("ox oy h add lineto".to_string());
+        pst.add_postscript("closepath stroke} def".to_string());
         self.ps_terminals(&mut pst);
         self.ps_cells(&mut pst);
         self.ps_terminals(&mut pst);
+        self.ps_stats(&mut pst);
 
         pst.set_border(40.0);
         pst.generate(filename).unwrap();
@@ -1299,14 +1331,18 @@ impl BookshelfCircuit {
                 continue;
             }
             bb.addpoint(self.cellpos[i].x, self.cellpos[i].y);
-            bb.addpoint(self.cellpos[i].x + self.cells[i].w, self.cellpos[i].y + self.cells[i].w);
+            bb.addpoint(
+                self.cellpos[i].x + self.cells[i].w,
+                self.cellpos[i].y + self.cells[i].w,
+            );
         }
         let width = bb.dx();
         let offset = bb.llx - self.rows[0].bounds.llx;
         // Amount of excess space
         let space = self.rows[0].bounds.dx() - bb.dx();
         self.notes.push(format!("Expanded with space {}", space));
-        self.notes.push(format!("Prior to expansion: {}", self.wl()));
+        self.notes
+            .push(format!("Prior to expansion: {}", self.wl()));
         self.notes.push(format!("Original bounding box: {}", bb));
         self.notes.push(format!("Offset {}", offset));
 
@@ -1322,7 +1358,10 @@ impl BookshelfCircuit {
             let movement = (ratio * space).round();
             self.cellpos[i].x += movement - offset;
             bb.addpoint(self.cellpos[i].x, self.cellpos[i].y);
-            bb.addpoint(self.cellpos[i].x + self.cells[i].w, self.cellpos[i].y + self.cells[i].w);
+            bb.addpoint(
+                self.cellpos[i].x + self.cells[i].w,
+                self.cellpos[i].y + self.cells[i].w,
+            );
         }
         self.notes.push(format!("After expansion: {}", self.wl()));
         self.notes.push(format!("Expanded bounding box: {}", bb));

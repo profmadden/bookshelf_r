@@ -4,6 +4,8 @@
 pub mod bookshelf;
 pub mod marklist;
 
+use std::path::Path;
+
 use argh::FromArgs;
 #[derive(FromArgs)]
 /// Bookshelf template reader
@@ -24,8 +26,12 @@ struct Args {
     #[argh(option, short = 'n')]
     net: Option<String>,
 
-    /// postscript file name
+    /// alternate PL file
     #[argh(option, short = 'p')]
+    plfile: Option<String>,
+
+    /// postscript file name
+    #[argh(option, short = 'P')]
     postscript: Option<String>,
 }
 
@@ -44,10 +50,15 @@ fn main() {
         }
     }
 
-    let bc;
+    let mut bc;
     if !arguments.block {
         println!("Bookshelf Standard Cell/Mixed Size reader");
         bc = bookshelf::BookshelfCircuit::read_aux(&auxname.clone());
+        if arguments.plfile.is_some() {
+            let f = arguments.plfile.unwrap();
+            let path = Path::new(&f);
+            bc.read_pl(path, false);
+        }
         bc.summarize();
     } else {
         println!("Bookshelf Block Packing Reader");
