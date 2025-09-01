@@ -368,9 +368,14 @@ impl BookshelfCircuit {
         pst.add_postscript("ox w add oy h add lineto".to_string());
         pst.add_postscript("ox oy h add lineto".to_string());
         pst.add_postscript("closepath stroke} def".to_string());
+
+        // Use generic PST box for the core area -- cells are using the macro, and
+        // don't alter the core bounding box.        
+        let bb = self.core();
+        pst.add_box(bb.llx, bb.lly, bb.urx, bb.ury);
         self.ps_terminals(&mut pst);
+
         self.ps_cells(&mut pst);
-        self.ps_terminals(&mut pst);
         self.ps_stats(&mut pst);
 
         pst.set_border(40.0);
