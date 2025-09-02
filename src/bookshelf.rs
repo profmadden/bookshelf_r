@@ -369,10 +369,17 @@ impl BookshelfCircuit {
         pst.add_postscript("ox oy h add lineto".to_string());
         pst.add_postscript("closepath stroke} def".to_string());
 
+        // Outside boundary of the entire placed stuff...  With a little bit of deadband to make
+        // sure we don't overlap a line.
+        pst.set_color(0.0, 1.0, 0.0, 1.0);
+        let bb = self.bounds();
+        pst.add_box(bb.llx - 3.0, bb.lly - 3.0, bb.urx + 6.0, bb.ury + 6.0);
         // Use generic PST box for the core area -- cells are using the macro, and
         // don't alter the core bounding box.        
+        pst.set_color(0.0, 0.0, 0.0, 1.0);
         let bb = self.core();
         pst.add_box(bb.llx, bb.lly, bb.urx, bb.ury);
+        
         self.ps_terminals(&mut pst);
 
         self.ps_cells(&mut pst);
@@ -1270,6 +1277,17 @@ impl BookshelfCircuit {
             let side = area.sqrt() * 1.10;
             result.addpoint(0.0, 0.0);
             result.addpoint(side, side);
+        }
+        result
+    }
+
+    pub fn bounds(&self) -> bbox::BBox {
+        let mut result = self.core(); // Get the bounds of the placement area
+        for c in 0..self.cells.len() {
+            let cp = &self.cellpos[c];
+            let cell = &self.cells[c];
+            result.addpoint(cp.x, cp.y);
+            result.addpoint(cp.x + cell.w, cp.y + cell.h);
         }
         result
     }
