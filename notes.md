@@ -39,3 +39,8 @@ all the code on the same platform.
 
 But... might wind up with 3D points?  And 3D
 bounding boxes?  Hmmmm.
+
+### 20250902
+
+Finally adding in cell orientation.  Annoying, man,
+totally annoying.

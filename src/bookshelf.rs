@@ -50,13 +50,16 @@ use std::fmt;
 
 use hypergraph::hypergraph;
 
-/// PinInstances are in the vector for the cells
+/// PinInstances are in the vector for the cells.
 #[derive(Clone)]
 pub struct PinInstance {
     pub name: String,
     pub dx: f32,
+    /// Delta from lower left corner of a cell
     pub dy: f32,
+    /// Delta from lower left corner
     pub parent_cell: usize,
+    /// Index for the parent cell
     pub parent_net: usize,
     pub details: Vec<PinDetail>,
 }
@@ -78,16 +81,53 @@ pub struct PinRef {
     pub index: usize,
 }
 
-pub struct Orientation {
-    pub orient: u8,
+#[derive(PartialEq, Eq, Clone, Copy)]
+pub enum Orientation {
+    N,
+    S,
+    E,
+    W,
+    FN,
+    FS,
+    FE,
+    FW,
 }
 
 impl fmt::Display for Orientation {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self.orient {
-            0 => write!(f, "N"),
-            _ => write!(f, "x"),
+        match self {
+            Orientation::N => write!(f, "N"),
+            Orientation::S => write!(f, "S"),
+            Orientation::E => write!(f, "E"),
+            Orientation::W => write!(f, "W"),
+            Orientation::FN => write!(f, "FN"),
+            Orientation::FS => write!(f, "FS"),
+            Orientation::FE => write!(f, "FE"),
+            Orientation::FW => write!(f, "FW"),
+            // _ => write!(f, "x"),
         }
+    }
+}
+
+impl Orientation {
+    pub fn new() -> Orientation {
+        Orientation::N
+    }
+    pub fn from_string(s: &String) -> Orientation {
+        match s.to_uppercase().as_str() {
+            "N" => return Orientation::N,
+            "S" => return Orientation::S,
+            "E" => return Orientation::E,
+            "W" => return Orientation::W,
+            "FN" => return Orientation::FN,
+            "FS" => return Orientation::FS,
+            "FE" => return Orientation::FE,
+            "FW" => return Orientation::FW,
+            _ => {
+                println!("Unrecognized orientation {}", s);
+            }
+        }
+        Orientation::N
     }
 }
 
@@ -125,6 +165,13 @@ pub struct Cell {
     pub name: String,
     pub w: f32,
     pub h: f32,
+    /// The original size is assuming a non-rotated
+    /// orientation.  When a cell is reoriented,
+    /// we update the w and h fields (using the original
+    /// native h and w), and also change the dx and dy
+    /// of pins as necessary
+    pub original_w: f32,
+    pub original_h: f32,
     // pub x: f32,
     // pub y: f32,
     pub pins: Vec<PinInstance>,
@@ -201,15 +248,22 @@ pub struct BookshelfCircuit {
     pub cell_map: HashMap<String, usize>,
     pub net_map: HashMap<String, usize>,
     pub macro_map: HashMap<String, usize>,
+    /// Notes is a string vector, which can have information added to it
+    /// as processing progresses.  The notes will be embedded into the
+    /// output PL files, the SHARPs, PostScript displays, and so on
     pub notes: Vec<String>,
+    /// Step size in the horizontal and vertical directions
     pub unit_x: f32,
     pub unit_y: f32,
     pub num_macros: usize,
     pub num_terminals: usize,
     pub num_cells: usize,
+    /// Easy access row height
     pub row_height: f32,
 }
 
+/// WlCalc contains information needed for fast wire length
+/// calculations
 pub struct WlCalc {
     pub marked_nets: MarkList,
 }
@@ -362,6 +416,26 @@ impl BookshelfCircuit {
         pst.add_text_ln(format!("Row height: {}", self.row_height));
     }
     pub fn postscript(&self, filename: String) {
+        // let mut pst = pstools::PSTool::new();
+        // pst.add_postscript("/box {/h 2 1 roll def /w 2 1 roll def /oy 2 1 roll def /ox 2 1 roll def newpath ox oy moveto".to_string());
+        // pst.add_postscript("ox w add oy lineto".to_string());
+        // pst.add_postscript("ox w add oy h add lineto".to_string());
+        // pst.add_postscript("ox oy h add lineto".to_string());
+        // pst.add_postscript("closepath stroke} def".to_string());
+        let mut pst = self.postscript_prep();
+
+        
+
+        self.ps_terminals(&mut pst);
+
+        self.ps_cells(&mut pst);
+        self.ps_stats(&mut pst);
+
+        pst.set_border(40.0);
+        pst.generate(filename).unwrap();
+    }
+
+    pub fn postscript_prep(&self) -> PSTool {
         let mut pst = pstools::PSTool::new();
         pst.add_postscript("/box {/h 2 1 roll def /w 2 1 roll def /oy 2 1 roll def /ox 2 1 roll def newpath ox oy moveto".to_string());
         pst.add_postscript("ox w add oy lineto".to_string());
@@ -375,18 +449,12 @@ impl BookshelfCircuit {
         let bb = self.bounds();
         pst.add_box(bb.llx - 3.0, bb.lly - 3.0, bb.urx + 6.0, bb.ury + 6.0);
         // Use generic PST box for the core area -- cells are using the macro, and
-        // don't alter the core bounding box.        
+        // don't alter the core bounding box.
         pst.set_color(0.0, 0.0, 0.0, 1.0);
         let bb = self.core();
         pst.add_box(bb.llx, bb.lly, bb.urx, bb.ury);
-        
-        self.ps_terminals(&mut pst);
 
-        self.ps_cells(&mut pst);
-        self.ps_stats(&mut pst);
-
-        pst.set_border(40.0);
-        pst.generate(filename).unwrap();
+        pst
     }
 
     pub fn postscript_wl(&self, filename: String) {
@@ -570,6 +638,8 @@ impl BookshelfCircuit {
                     name: cellname,
                     w: xf,
                     h: yf,
+                    original_w: xf,
+                    original_h: yf,
                     // x: 0.0,
                     // y: 0.0,
                     pins: Vec::new(),
@@ -588,7 +658,7 @@ impl BookshelfCircuit {
                 };
                 self.cellpos.push(cp);
 
-                let co = Orientation { orient: 0 };
+                let co = Orientation::N;
                 self.orient.push(co);
             } else {
                 println!("Not ok match");
@@ -777,8 +847,12 @@ impl BookshelfCircuit {
                         dy: dy + offy,
                         parent_cell: cidx,
                         parent_net: nidx,
-                        details: Vec::new(),
+                        details: vec![PinDetail {
+                            dx: dx + offx,
+                            dy: dy + offy,
+                        }],
                     };
+
                     self.cells[cidx].pins.push(pi);
                 }
                 self.nets.push(net);
@@ -1465,6 +1539,8 @@ impl BookshelfCircuit {
                             name: bname,
                             w: w,
                             h: h,
+                            original_w: w,
+                            original_h: h,
                             pins: Vec::new(),
                             terminal: false,
                             soft: None,
@@ -1474,7 +1550,7 @@ impl BookshelfCircuit {
                         self.cells.push(c);
                         let cp = point::Point { x: 0.0, y: 0.0 };
                         self.cellpos.push(cp);
-                        self.orient.push(Orientation { orient: 0 });
+                        self.orient.push(Orientation::N);
                     }
                     if let Ok(tname) = scan_fmt!(&l, "{} terminal", String) {
                         if LDBG {
@@ -1486,6 +1562,8 @@ impl BookshelfCircuit {
                             name: tname,
                             w: 1.0,
                             h: 1.0,
+                            original_w: 1.0,
+                            original_h: 1.0,
                             pins: Vec::new(),
                             terminal: true,
                             soft: None,
@@ -1493,7 +1571,7 @@ impl BookshelfCircuit {
                             can_rotate: true,
                         });
                         self.cellpos.push(point::Point { x: 0.0, y: 0.0 });
-                        self.orient.push(Orientation { orient: 0 });
+                        self.orient.push(Orientation::N);
                     }
                 }
                 _ => {
@@ -1501,6 +1579,54 @@ impl BookshelfCircuit {
                 }
             }
         }
+    }
+
+    pub fn orient_cell(cell: &mut Cell, orient: Orientation) {
+        if orient == Orientation::FN || orient == Orientation::S || orient == Orientation::E || orient == Orientation::FE {
+            // Flip the X position of the pins
+            println!("Doing X reorientation for {}", orient);
+            for pin in &mut cell.pins {
+                pin.dx = cell.original_w - pin.details[0].dx;
+                println!("  pin {} moves to {}", pin.name, pin.dx);
+            }
+        } else {
+            for pin in &mut cell.pins {
+                pin.dx = pin.details[0].dx;
+            }
+        }
+
+        if orient == Orientation::S || orient == Orientation::FS || orient == Orientation::FE || orient == Orientation::W {
+            // Flip the X position of the pins
+            for pin in &mut cell.pins {
+                pin.dy = cell.original_h - pin.details[0].dy;
+            }
+        } else {
+            for pin in &mut cell.pins {
+                pin.dy = pin.details[0].dy;
+            }
+        }
+
+        // Now potentially swap X and Y
+        if orient == Orientation::E
+            || orient == Orientation::FE
+            || orient == Orientation::W
+            || orient == Orientation::FW
+        {
+            cell.h = cell.original_w;
+            cell.w = cell.original_h;
+            for pin in &mut cell.pins {
+                let old_dx = pin.dx;
+                pin.dx = pin.dy;
+                pin.dy = old_dx;
+            }
+        }
+    }
+
+    pub fn set_orientation(&mut self, cell_id: usize, orient: Orientation) {
+        let mut cell = &mut self.cells[cell_id];
+        BookshelfCircuit::orient_cell(&mut cell, orient);
+
+        self.orient[cell_id] = orient;
     }
 }
 
