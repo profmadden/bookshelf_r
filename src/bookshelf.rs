@@ -350,16 +350,21 @@ impl BookshelfCircuit {
         }
     }
     pub fn ps_cells(&self, pst: &mut PSTool) {
-        pst.set_color(0.1, 0.1, 0.8, 1.0);
+        pst.set_color(0.4, 0.4, 1.0, 1.0);
         for i in 0..self.cells.len() {
-            if !self.cells[i].terminal {
-                // pst.add_text(self.cellpos[i].x, self.cellpos[i].y, self.cells[i].name.clone());
-                // pst.add_box(
-                //     self.cellpos[i].x + 0.25,
-                //     self.cellpos[i].y + 0.25,
-                //     self.cellpos[i].x + self.cells[i].w - 0.5,
-                //     self.cellpos[i].y + self.cells[i].h - 0.5,
-                // );
+            if !self.cells[i].terminal && !self.cells[i].is_macro {
+                pst.add_postscript(format!(
+                    "{:.1} {:.1} {:.1} {:.1} box",
+                    self.cellpos[i].x + 0.25,
+                    self.cellpos[i].y + 0.25,
+                    self.cells[i].w - 0.5,
+                    self.cells[i].h - 0.5
+                ));
+            }
+        }
+        pst.set_color(0.5, 0.2, 0.2, 1.0);
+        for i in 0..self.cells.len() {
+            if !self.cells[i].terminal && self.cells[i].is_macro {
                 pst.add_postscript(format!(
                     "{:.1} {:.1} {:.1} {:.1} box",
                     self.cellpos[i].x + 0.25,
@@ -372,6 +377,7 @@ impl BookshelfCircuit {
     }
     pub fn ps_labels(&self, pst: &mut PSTool) {
         pst.set_color(0.1, 0.1, 0.0, 1.0);
+        pst.set_font(self.row_height * 0.3, "Courier".to_string());
         for i in 0..self.cells.len() {
             if !self.cells[i].terminal {
                 pst.add_text(
@@ -414,6 +420,9 @@ impl BookshelfCircuit {
             self.rows.len()
         ));
         pst.add_text_ln(format!("Row height: {}", self.row_height));
+        let avg_len = self.wl() / self.nets.len() as f32;
+        pst.add_text_ln(format!("Average net length: {:.2}, {:.2} in row heights", avg_len, avg_len / self.row_height));
+
     }
     pub fn postscript(&self, filename: String) {
         // let mut pst = pstools::PSTool::new();
