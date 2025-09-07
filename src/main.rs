@@ -31,6 +31,10 @@ struct Args {
     #[argh(option, short = 'p')]
     plfile: Option<String>,
 
+    /// output PL file
+    #[argh(option, short = 'o')]
+    output_pl: Option<String>,
+
     /// postscript file name
     #[argh(option, short = 'P')]
     postscript: Option<String>,
@@ -82,13 +86,14 @@ fn main() {
         let cidx = bc.cell_index(&arguments.cell.unwrap().clone()).unwrap();
         println!("Cell index {} is {}", cidx, bc.cells[cidx].name);
         println!(
-            "Cell is {} by {} located at ({}, {})",
-            bc.cells[cidx].w, bc.cells[cidx].h, bc.cellpos[cidx].x, bc.cellpos[cidx].y
+            "Cell is {} by {} located at ({}, {}) orientation {}",
+            bc.cells[cidx].w, bc.cells[cidx].h, bc.cellpos[cidx].x, bc.cellpos[cidx].y, bc.orient[cidx],
         );
         wlc.add_cells(&bc, &vec![cidx]);
         for p in &bc.cells[cidx].pins {
             println!(
-                "  Net {} {}  wire length {}",
+                "  Pin {} at dxdy {} {}    Net {} {}  wire length {}",
+                p.name, p.dx, p.dy,
                 p.parent_net,
                 bc.nets[p.parent_net].name,
                 bc.net_wl(&bc.nets[p.parent_net])
@@ -108,13 +113,19 @@ fn main() {
         for pr in &bc.nets[nidx].pins {
             let instance = &bc.cells[pr.parent_cell].pins[pr.index];
             println!(
-                "  Cell {} index {} is pin offset {} {}",
-                bc.cells[pr.parent_cell].name, pr.index, instance.dx, instance.dy
+                "  Cell {} at {} {}, orientation {}, pin {} index {} offset {} {}",
+                bc.cells[pr.parent_cell].name, bc.cellpos[pr.parent_cell].x, bc.cellpos[pr.parent_cell].y,
+                bc.orient[pr.parent_cell],
+                instance.name,
+                pr.index, instance.dx, instance.dy
             );
         }
     }
     if arguments.postscript.is_some() {
         bc.postscript(arguments.postscript.unwrap());
+    }
+    if arguments.output_pl.is_some() {
+        bc.write_pl(arguments.output_pl.unwrap().clone(), & bc.notes);
     }
 }
 

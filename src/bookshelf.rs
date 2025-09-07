@@ -910,6 +910,13 @@ impl BookshelfCircuit {
                             refpos[cidx].x = x.parse().unwrap();
                             refpos[cidx].y = y.parse().unwrap();
                         }
+                        self.orient[cidx] = Orientation::N;
+                        // Try to get the orientation
+                        if let Ok((_cellname, _x, _y, orient)) = scan_fmt!(&l, " {} {} {} : {}", String, String, String, String)
+                        {
+                            // println!("Got orientation {} for cell {}", orient, cellname);
+                            self.set_orientation(cidx, Orientation::from_string(&orient));
+                        }
                     }
                 }
                 Err(_e) => {
@@ -949,8 +956,8 @@ impl BookshelfCircuit {
             let c = &self.cells[i];
             writeln!(
                 &mut f,
-                "{}  {} {}",
-                c.name, self.cellpos[i].x, self.cellpos[i].y
+                "{}  {} {} : {}",
+                c.name, self.cellpos[i].x, self.cellpos[i].y, self.orient[i]
             )
             .unwrap();
         }
@@ -971,15 +978,15 @@ impl BookshelfCircuit {
             if c.is_macro || c.terminal {
                 writeln!(
                     &mut f,
-                    "{}  {} {} : N /FIXED",
-                    c.name, self.cellpos[i].x, self.cellpos[i].y
+                    "{}  {} {} : {} /FIXED",
+                    c.name, self.cellpos[i].x, self.cellpos[i].y, self.orient[i]
                 )
                 .unwrap();
             } else {
                 writeln!(
                     &mut f,
-                    "{}  {} {} : N",
-                    c.name, self.cellpos[i].x, self.cellpos[i].y
+                    "{}  {} {} : {}",
+                    c.name, self.cellpos[i].x, self.cellpos[i].y, self.orient[i]
                 )
                 .unwrap();
             }
@@ -1608,10 +1615,10 @@ impl BookshelfCircuit {
     pub fn orient_cell(cell: &mut Cell, orient: Orientation) {
         if orient == Orientation::FN || orient == Orientation::S || orient == Orientation::E || orient == Orientation::FE {
             // Flip the X position of the pins
-            println!("Doing X reorientation for {}", orient);
+            // println!("Doing X reorientation for {}", orient);
             for pin in &mut cell.pins {
                 pin.dx = cell.original_w - pin.details[0].dx;
-                println!("  pin {} moves to {}", pin.name, pin.dx);
+                // println!("  pin {} moves to {}", pin.name, pin.dx);
             }
         } else {
             for pin in &mut cell.pins {
