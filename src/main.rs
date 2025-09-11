@@ -42,6 +42,10 @@ struct Args {
     /// flip demo
     #[argh(switch, short = 'f')]
     flipdemo: bool,
+
+    /// export AUX and associated files
+    #[argh(option, short = 'x')]
+    export: Option<String>
 }
 
 fn main() {
@@ -126,6 +130,9 @@ fn main() {
     }
     if arguments.output_pl.is_some() {
         bc.write_pl(arguments.output_pl.unwrap().clone(), & bc.notes);
+    }
+    if arguments.export.is_some() {
+        bc.write_aux(&arguments.export.unwrap());
     }
 }
 
