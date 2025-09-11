@@ -978,12 +978,21 @@ impl BookshelfCircuit {
         }
         for i in 0..self.cells.len() {
             let c = &self.cells[i];
+            if !c.terminal {
             writeln!(
                 &mut f,
                 "{}  {} {} : {}",
                 c.name, self.cellpos[i].x, self.cellpos[i].y, self.orient[i]
             )
             .unwrap();
+            } else {
+            writeln!(
+                &mut f,
+                "{}  {} {} : {} /FIXED",
+                c.name, self.cellpos[i].x, self.cellpos[i].y, self.orient[i]
+            )
+            .unwrap();
+            }
         }
     }
 
