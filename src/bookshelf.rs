@@ -816,7 +816,7 @@ impl BookshelfCircuit {
         for nidx in 0..num_nets {
             let line1 = BookshelfCircuit::getline(&mut reader).unwrap();
             // Hack the line format -- block packing examples don't have net names?
-            let line = format!("{} _net{}", line1, nidx);
+            let line = format!("{} net{}", line1, nidx);
 
             if let Ok((nd, nn)) = scan_fmt!(&line, "NetDegree : {d} {}", usize, String) {
                 if LDBG {
@@ -1166,7 +1166,7 @@ impl BookshelfCircuit {
             writeln!(&mut f, " Coordinate   : {}", r.bounds.lly).unwrap();
             writeln!(&mut f, " Height       : {}", r.bounds.dy()).unwrap();            
             writeln!(&mut f, " Sitewidth    : {}", 1).unwrap();            
-            writeln!(&mut f, " Sitepacing   : {}", r.site_spacing).unwrap();
+            writeln!(&mut f, " Sitespacing   : {}", r.site_spacing).unwrap();
             writeln!(&mut f, " Siteorient   : N").unwrap();            
             writeln!(&mut f, " Sitesymmetry : Y").unwrap();                        
             writeln!(&mut f, " SubrowOrigin : {} Numsites : {}", r.bounds.llx, r.bounds.dx()).unwrap();            
