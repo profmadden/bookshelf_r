@@ -1176,7 +1176,7 @@ impl BookshelfCircuit {
 
     pub fn write_aux(&self, base: &String) {
         let mut f = File::create(format!("{}.aux", base)).unwrap();
-        writeln!(&mut f, "UCLA aux 1.0").unwrap();
+        // writeln!(&mut f, "UCLA aux 1.0").unwrap();
         writeln!(&mut f, "RowBasedPlacement : {base}.nodes {base}.nets {base}.wts {base}.pl {base}.scl").unwrap();
         writeln!(&mut f, "# Converted by write_aux from bookshelf_r").unwrap();
         for n in &self.notes {
