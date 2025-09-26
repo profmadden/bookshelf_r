@@ -1439,7 +1439,7 @@ impl BookshelfCircuit {
     }
     pub fn core(&self) -> bbox::BBox {
         let mut result = bbox::BBox::new();
-        if self.rows.len() > 1 {
+        if self.rows.len() > 0 {
             for r in &self.rows {
                 result.expand(&r.bounds);
             }
