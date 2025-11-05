@@ -39,13 +39,17 @@ struct Args {
     #[argh(option, short = 'P')]
     postscript: Option<String>,
 
+    /// colorized postscript file name
+    #[argh(option)]
+    colorize: Option<String>,
+
     /// flip demo
     #[argh(switch, short = 'f')]
     flipdemo: bool,
 
     /// export AUX and associated files
     #[argh(option, short = 'x')]
-    export: Option<String>
+    export: Option<String>,
 }
 
 fn main() {
@@ -91,13 +95,19 @@ fn main() {
         println!("Cell index {} is {}", cidx, bc.cells[cidx].name);
         println!(
             "Cell is {} by {} located at ({}, {}) orientation {}",
-            bc.cells[cidx].w, bc.cells[cidx].h, bc.cellpos[cidx].x, bc.cellpos[cidx].y, bc.orient[cidx],
+            bc.cells[cidx].w,
+            bc.cells[cidx].h,
+            bc.cellpos[cidx].x,
+            bc.cellpos[cidx].y,
+            bc.orient[cidx],
         );
         wlc.add_cells(&bc, &vec![cidx]);
         for p in &bc.cells[cidx].pins {
             println!(
                 "  Pin {} at dxdy {} {}    Net {} {}  wire length {}",
-                p.name, p.dx, p.dy,
+                p.name,
+                p.dx,
+                p.dy,
                 p.parent_net,
                 bc.nets[p.parent_net].name,
                 bc.net_wl(&bc.nets[p.parent_net])
@@ -118,18 +128,28 @@ fn main() {
             let instance = &bc.cells[pr.parent_cell].pins[pr.index];
             println!(
                 "  Cell {} at {} {}, orientation {}, pin {} index {} offset {} {}",
-                bc.cells[pr.parent_cell].name, bc.cellpos[pr.parent_cell].x, bc.cellpos[pr.parent_cell].y,
+                bc.cells[pr.parent_cell].name,
+                bc.cellpos[pr.parent_cell].x,
+                bc.cellpos[pr.parent_cell].y,
                 bc.orient[pr.parent_cell],
                 instance.name,
-                pr.index, instance.dx, instance.dy
+                pr.index,
+                instance.dx,
+                instance.dy
             );
         }
     }
     if arguments.postscript.is_some() {
         bc.postscript(arguments.postscript.unwrap());
     }
+
+    if arguments.colorize.is_some() {
+        let mut pst = &mut bc.postscript_prep();
+        bc.ps_color_cells(&mut pst);
+        pst.generate(arguments.colorize.unwrap().clone()).unwrap();
+    }
     if arguments.output_pl.is_some() {
-        bc.write_pl(arguments.output_pl.unwrap().clone(), & bc.notes);
+        bc.write_pl(arguments.output_pl.unwrap().clone(), &bc.notes);
     }
     if arguments.export.is_some() {
         bc.write_aux(&arguments.export.unwrap());
@@ -188,7 +208,10 @@ pub fn flipdemo() {
         dy: 195.0,
         parent_cell: 0,
         parent_net: 0,
-        details: vec![PinDetail { dx: 36.0, dy: 145.0 }],
+        details: vec![PinDetail {
+            dx: 36.0,
+            dy: 145.0,
+        }],
     });
     c.pins.push(PinInstance {
         name: "c".to_string(),
