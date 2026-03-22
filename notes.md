@@ -44,3 +44,18 @@ bounding boxes?  Hmmmm.
 
 Finally adding in cell orientation.  Annoying, man,
 totally annoying.
+
+### 20260322
+
+Adding in support for soft macro blocks.  Might want
+to have the Bookshelf aux reader figure out if it's
+a block packing problem, or a mixed size standard
+cell problem.  With standard cell, we have rows, and
+a fixed core.  With block packing, might have different
+aspect ratio requests, with the placement area
+being reshaped considerably (and the locations of
+pads also changing).
+
+Also should move from using the PSTools box, to a
+3D box (handy for 3D placement).  Default box will
+be with a Z location from 0.0 to 1.0.

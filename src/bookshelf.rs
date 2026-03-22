@@ -1700,7 +1700,8 @@ impl BookshelfCircuit {
                         println!("Got {} soft blocks", ns);
                         numsoft = ns;
                     }
-                    if let Ok((bname, corners, x0, y0, x1, y1, x2, y2, x3, y3)) = scan_fmt!(
+                    // Assume hardrectangular has exactly four corners....  Gripe if not.
+                    if let Ok((bname, corners, x0, y0, _x1, _y1, x2, y2, _x3, _y3)) = scan_fmt!(
                         &l,
                         "{} hardrectilinear {} ({}, {}) ({}, {}) ({}, {}) ({}, {})",
                         String,
@@ -1716,6 +1717,9 @@ impl BookshelfCircuit {
                     ) {
                         if LDBG {
                             println!("Got hard macro {}", bname);
+                        }
+                        if corners != 4 {
+                            println!("Block {bname} does not has {corners} corners!");
                         }
                         let cn = self.find_cell(bname.clone());
 
@@ -1735,6 +1739,27 @@ impl BookshelfCircuit {
                         };
                         self.cells.push(c);
                         let cp = point::Point { x: 0.0, y: 0.0 };
+                        self.cellpos.push(cp);
+                        self.orient.push(Orientation::N);
+                    }
+                    if let Ok((bname, area, min_aspect, max_aspect)) = scan_fmt!(&l, "{} softrectangular {} {} {}", String, f32, f32, f32) {
+                        let cn = self.find_cell(bname.clone());
+                        let w = area.sqrt();
+                        let h = w;
+                        let c = Cell {
+                            name: bname,
+                            w: w,
+                            h: h,
+                            original_w: w,
+                            original_h: h,
+                            pins: Vec::new(),
+                            terminal: false,
+                            soft: None,
+                            is_macro: false,
+                            can_rotate: false
+                        };
+                        self.cells.push(c);
+                        let cp = point::Point{x: 0.0, y: 0.0};
                         self.cellpos.push(cp);
                         self.orient.push(Orientation::N);
                     }
