@@ -1744,8 +1744,8 @@ impl BookshelfCircuit {
                     }
                     if let Ok((bname, area, min_aspect, max_aspect)) = scan_fmt!(&l, "{} softrectangular {} {} {}", String, f32, f32, f32) {
                         let cn = self.find_cell(bname.clone());
-                        let w = area.sqrt();
-                        let h = w;
+                        let w = area.sqrt().trunc();
+                        let h = (area/w).trunc() + 1.0;  // Force integer sizing
                         let c = Cell {
                             name: bname,
                             w: w,
@@ -1755,8 +1755,8 @@ impl BookshelfCircuit {
                             pins: Vec::new(),
                             terminal: false,
                             soft: None,
-                            is_macro: false,
-                            can_rotate: false
+                            is_macro: true,
+                            can_rotate: true
                         };
                         self.cells.push(c);
                         let cp = point::Point{x: 0.0, y: 0.0};
