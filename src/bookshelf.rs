@@ -334,13 +334,19 @@ impl BookshelfCircuit {
 
         bc
     }
+
+    pub fn add_box(&self, pst: &mut PSTool, llx: f32, lly: f32, urx: f32, ury: f32) {
+        let (scale, offset_x, offset_y) = pst.get_scale();
+        pst.add_box(offset_x + llx * scale, offset_y + lly * scale, urx * scale, ury * scale);
+    }
+
     pub fn ps_terminals(&self, pst: &mut PSTool) {
         // Terminals n the background
         pst.set_color(1.0, 0.3, 0.3, 1.0);
         for i in 0..self.cells.len() {
             if self.cells[i].terminal {
                 // pst.add_text(self.cellpos[i].x, self.cellpos[i].y, self.cells[i].name.clone());
-                pst.add_box(
+                self.add_box(pst,
                     self.cellpos[i].x - 1.0,
                     self.cellpos[i].y - 1.0,
                     self.cellpos[i].x + self.cells[i].w + 1.0,
@@ -351,14 +357,15 @@ impl BookshelfCircuit {
     }
     pub fn ps_cells(&self, pst: &mut PSTool) {
         pst.set_color(0.4, 0.4, 1.0, 1.0);
+        let (scale, offset_x, offset_y) = pst.get_scale();
         for i in 0..self.cells.len() {
             if !self.cells[i].terminal && !self.cells[i].is_macro {
                 pst.add_postscript(format!(
                     "{:.1} {:.1} {:.1} {:.1} box",
-                    self.cellpos[i].x + 0.25,
-                    self.cellpos[i].y + 0.25,
-                    self.cells[i].w - 0.5,
-                    self.cells[i].h - 0.5
+                    offset_x + scale * (self.cellpos[i].x + 0.25),
+                    offset_y + scale * (self.cellpos[i].y + 0.25),
+                    scale * (self.cells[i].w - 0.5),
+                    scale * (self.cells[i].h - 0.5)
                 ));
             }
         }
@@ -367,10 +374,10 @@ impl BookshelfCircuit {
             if !self.cells[i].terminal && self.cells[i].is_macro {
                 pst.add_postscript(format!(
                     "{:.1} {:.1} {:.1} {:.1} box",
-                    self.cellpos[i].x + 0.25,
-                    self.cellpos[i].y + 0.25,
-                    self.cells[i].w - 0.5,
-                    self.cells[i].h - 0.5
+                    offset_x + scale *(self.cellpos[i].x + 0.25),
+                    offset_y + scale * (self.cellpos[i].y + 0.25),
+                    scale * (self.cells[i].w - 0.5),
+                    scale * (self.cells[i].h - 0.5)
                 ));
             }
         }
