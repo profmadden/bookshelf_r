@@ -262,6 +262,25 @@ pub struct BookshelfCircuit {
     pub row_height: f32,
 }
 
+pub struct Display {
+    /// Display cells
+    pub cells: bool, 
+    /// Display colorized boxes
+    pub color_cells: bool,
+    /// Labels on cells
+    pub labels: bool,
+    /// Movement from prior position
+    pub movement: bool,
+    /// Display terminals
+    pub terminals: bool, 
+    /// Display the log information
+    pub notes: bool,
+    /// Box around the placement, and the interior rows
+    pub boundingbox: bool,
+    /// Draw the rows
+    pub rows: bool,
+}
+
 /// WlCalc contains information needed for fast wire length
 /// calculations
 pub struct WlCalc {
@@ -335,9 +354,9 @@ impl BookshelfCircuit {
         bc
     }
 
-    pub fn add_box(&self, pst: &mut PSTool, llx: f32, lly: f32, urx: f32, ury: f32) {
+    pub fn add_box_deprecated(&self, pst: &mut PSTool, llx: f32, lly: f32, urx: f32, ury: f32) {
         let (scale, offset_x, offset_y) = pst.get_scale();
-        pst.add_box(offset_x + llx * scale, offset_y + lly * scale, urx * scale, ury * scale);
+        pst.add_box(offset_x + llx * scale, offset_y + lly * scale, offset_x + urx * scale, offset_y + ury * scale);
     }
 
     pub fn ps_terminals(&self, pst: &mut PSTool) {
@@ -346,7 +365,7 @@ impl BookshelfCircuit {
         for i in 0..self.cells.len() {
             if self.cells[i].terminal {
                 // pst.add_text(self.cellpos[i].x, self.cellpos[i].y, self.cells[i].name.clone());
-                self.add_box(pst,
+                pst.add_box(
                     self.cellpos[i].x - 1.0,
                     self.cellpos[i].y - 1.0,
                     self.cellpos[i].x + self.cells[i].w + 1.0,
@@ -360,47 +379,56 @@ impl BookshelfCircuit {
         let (scale, offset_x, offset_y) = pst.get_scale();
         for i in 0..self.cells.len() {
             if !self.cells[i].terminal && !self.cells[i].is_macro {
-                pst.add_postscript(format!(
-                    "{:.1} {:.1} {:.1} {:.1} box",
-                    offset_x + scale * (self.cellpos[i].x + 0.25),
-                    offset_y + scale * (self.cellpos[i].y + 0.25),
-                    scale * (self.cells[i].w - 0.5),
-                    scale * (self.cells[i].h - 0.5)
-                ));
+                pst.add_box(self.cellpos[i].x + 0.25, self.cellpos[i].y + 0.25, 
+                    self.cellpos[i].x + self.cells[i].w - 0.5, 
+                    self.cellpos[i].y + self.cells[i].h - 0.5);
+                // pst.add_postscript(format!(
+                //     "{:.1} {:.1} {:.1} {:.1} box",
+                //     offset_x + scale * (self.cellpos[i].x + 0.25),
+                //     offset_y + scale * (self.cellpos[i].y + 0.25),
+                //     scale * (self.cells[i].w - 0.5),
+                //     scale * (self.cells[i].h - 0.5)
+                //));
             }
         }
         pst.set_color(0.5, 0.2, 0.2, 1.0);
         for i in 0..self.cells.len() {
             if !self.cells[i].terminal && self.cells[i].is_macro {
-                pst.add_postscript(format!(
-                    "{:.1} {:.1} {:.1} {:.1} box",
-                    offset_x + scale *(self.cellpos[i].x + 0.25),
-                    offset_y + scale * (self.cellpos[i].y + 0.25),
-                    scale * (self.cells[i].w - 0.5),
-                    scale * (self.cells[i].h - 0.5)
-                ));
+                pst.add_box(self.cellpos[i].x + 0.25, self.cellpos[i].y + 0.25, 
+                    self.cellpos[i].x + self.cells[i].w - 0.5, 
+                    self.cellpos[i].y + self.cells[i].h - 0.5);
+                // pst.add_postscript(format!(
+                //     "{:.1} {:.1} {:.1} {:.1} box",
+                //     offset_x + scale *(self.cellpos[i].x + 0.25),
+                //     offset_y + scale * (self.cellpos[i].y + 0.25),
+                //     scale * (self.cells[i].w - 0.5),
+                //     scale * (self.cells[i].h - 0.5)
+                // ));
             }
         }
     }
     fn ps_color(pst: &mut pstools::PSTool, n: u32, k: u32) {
-        let mut r = 1.0 * (((11 * n) % k) as f32).sin().abs();
-        if r < 0.3 {
-            r = r + 0.2;
-        }
-        let mut g = 1.0 - ((7 * n) as f32).cos().abs();
-        if g < 0.5 {
-            g = g + 0.1;
-        }
-        let mut b = (r * g * 12.3).sin().abs();
-        if b < 0.2 {
-            b = b + 0.1;
-        }
+        // let mut r = 1.0 * (((11 * n) % k) as f32).sin().abs();
+        // if r < 0.3 {
+        //     r = r + 0.2;
+        // }
+        // let mut g = 1.0 - ((7 * n) as f32).cos().abs();
+        // if g < 0.5 {
+        //     g = g + 0.1;
+        // }
+        // let mut b = (r * g * 12.3).sin().abs();
+        // if b < 0.2 {
+        //     b = b + 0.1;
+        // }
+        let (r, g, b) = PSTool::gen_color(n as i32);
 
         pst.set_color(r, g, b, 1.0);
     }
     /// Generate PostScript for the cell and macro positions, using
     /// the cell color group (or cell index if that does not exist).
     pub fn ps_color_cells(&self, pst: &mut PSTool) {
+        let (scale, offset_x, offset_y) = pst.get_scale();
+
         for i in 0..self.cells.len() {
             let cn;
             if self.cell_color.is_some() {
@@ -410,14 +438,16 @@ impl BookshelfCircuit {
                 cn = i;
             }
             BookshelfCircuit::ps_color(pst, cn as u32, 32);
+            pst.add_box(self.cellpos[i].x + 0.25, self.cellpos[i].y + 0.25,
+            self.cellpos[i].x + self.cells[i].w - 0.5, self.cellpos[i].y + self.cells[i].h - 0.5);
 
-            pst.add_postscript(format!(
-                "{:.1} {:.1} {:.1} {:.1} box",
-                self.cellpos[i].x + 0.25,
-                self.cellpos[i].y + 0.25,
-                self.cells[i].w - 0.5,
-                self.cells[i].h - 0.5
-            ));
+            // pst.add_postscript(format!(
+            //     "{:.1} {:.1} {:.1} {:.1} box",
+            //     offset_x + scale * (self.cellpos[i].x + 0.25),
+            //     offset_y + scale * (self.cellpos[i].y + 0.25),
+            //     scale * (self.cells[i].w - 0.5),
+            //     scale * (self.cells[i].h - 0.5)
+            // ));
         }
     }
     pub fn ps_labels(&self, pst: &mut PSTool) {
@@ -521,24 +551,55 @@ impl BookshelfCircuit {
 
     pub fn postscript_prep(&self) -> PSTool {
         let mut pst = pstools::PSTool::new();
-        pst.add_postscript("/box {/h 2 1 roll def /w 2 1 roll def /oy 2 1 roll def /ox 2 1 roll def newpath ox oy moveto".to_string());
-        pst.add_postscript("ox w add oy lineto".to_string());
-        pst.add_postscript("ox w add oy h add lineto".to_string());
-        pst.add_postscript("ox oy h add lineto".to_string());
-        pst.add_postscript("closepath stroke} def".to_string());
+        // pst.add_postscript("/box {/h 2 1 roll def /w 2 1 roll def /oy 2 1 roll def /ox 2 1 roll def newpath ox oy moveto".to_string());
+        // pst.add_postscript("ox w add oy lineto".to_string());
+        // pst.add_postscript("ox w add oy h add lineto".to_string());
+        // pst.add_postscript("ox oy h add lineto".to_string());
+        // pst.add_postscript("closepath stroke} def".to_string());
 
         // Outside boundary of the entire placed stuff...  With a little bit of deadband to make
         // sure we don't overlap a line.
         pst.set_color(0.0, 1.0, 0.0, 1.0);
+     
+
+        pst
+    }
+
+    pub fn ps_box(&self, pst: &mut PSTool) {
         let bb = self.bounds();
+        pst.set_color(0.0, 1.0, 0.0, 1.0);
+
         pst.add_box(bb.llx - 3.0, bb.lly - 3.0, bb.urx + 6.0, bb.ury + 6.0);
         // Use generic PST box for the core area -- cells are using the macro, and
         // don't alter the core bounding box.
         pst.set_color(0.0, 0.0, 0.0, 1.0);
         let bb = self.core();
         pst.add_box(bb.llx, bb.lly, bb.urx, bb.ury);
+    }
 
-        pst
+    pub fn bookshelf_display(&self) -> Display {
+        Display { cells: true, terminals: true, notes: true, color_cells: false, labels: false, movement: false, boundingbox: true, rows: false}
+    }
+
+    pub fn postscript_display(&self, pst: &mut PSTool, display: &Display) {
+        if display.cells {
+            self.ps_cells(pst);
+        }
+        if display.color_cells {
+            self.ps_color_cells(pst);
+        }
+        if display.movement {
+            self.ps_movement(pst);
+        }
+        if display.terminals {
+            self.ps_terminals(pst);
+        }
+        if display.boundingbox {
+            self.ps_box(pst);
+        }
+        if display.notes {
+            self.ps_stats(pst);
+        }
     }
 
     pub fn postscript_wl(&self, filename: String) {

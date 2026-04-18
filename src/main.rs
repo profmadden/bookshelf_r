@@ -39,6 +39,10 @@ struct Args {
     #[argh(option, short = 'P')]
     postscript: Option<String>,
 
+    /// display testing for PostScript output
+    #[argh(option)]
+    display_test: Option<String>,
+
     /// colorized postscript file name
     #[argh(option)]
     colorize: Option<String>,
@@ -139,6 +143,35 @@ fn main() {
             );
         }
     }
+
+    if arguments.display_test.is_some() {
+        let mut pst = bc.postscript_prep();
+        let mut display = bc.bookshelf_display();
+        bc.postscript_display(&mut pst, &display);
+
+
+        let bounds = bc.bounds();
+        // pst.push(0.3, (bounds.urx - bounds.llx)*1.05, 0.0);
+        pst.add_gsave();
+        pst.add_translate(bounds.urx * 1.05, 0.0);
+        pst.add_scale(0.3);
+        display.notes = false;
+        bc.postscript_display(&mut pst, &display);
+        // pst.pop();
+        pst.add_grestore();
+        // pst.push(0.4, (bounds.urx - bounds.llx)*1.05, bounds.ury * 0.5);
+        pst.add_gsave();
+        pst.add_translate(bounds.urx * 1.05, bounds.ury * 0.5);
+        pst.add_scale(0.4);
+
+        display.cells = false;
+        display.color_cells = true;
+        bc.postscript_display(&mut pst, &display);
+        pst.add_grestore();
+
+        pst.generate(arguments.display_test.unwrap().clone()).unwrap();
+    }
+
     if arguments.postscript.is_some() {
         bc.postscript(arguments.postscript.unwrap());
     }
