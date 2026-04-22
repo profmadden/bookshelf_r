@@ -472,13 +472,12 @@ impl BookshelfCircuit {
         pst.set_color(0.8, 0.8, 0.8, 1.0);
         for i in 0..self.cells.len() {
             let c = &self.cells[i];
-            pst.add_postscript(format!(
-                "{:.1} {:.1} {:.1} {:.1} box",
+            pst.add_box(
                 rp[i].x + 0.5,
                 rp[i].y + 0.5,
-                self.cells[i].w - 1.0,
-                self.cells[i].h - 1.0
-            ));
+                rp[i].x + self.cells[i].w - 1.0,
+                rp[i].y + self.cells[i].h - 1.0
+            );
         }
 
         pst.set_color(1.0, 0.0, 0.0, 1.0);
@@ -496,13 +495,12 @@ impl BookshelfCircuit {
             );
             let cx = self.cellpos[i].x + dx;
             let cy = self.cellpos[i].y + dy;
-            pst.add_postscript(format!(
-                "{:.1} {:.1} {:.1} {:.1} box",
+            pst.add_box(
                 cx - 1.5,
                 cy - 1.5,
-                3.0,
-                3.0
-            ));
+                cx + 3.0,
+                cy + 3.0
+            );
         }
     }
 
