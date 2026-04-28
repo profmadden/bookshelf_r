@@ -36,7 +36,7 @@ use std::path::Path;
 
 use pstools::PSTool;
 
-const LDBG: bool = false;
+const LDBG: bool = true;
 
 // mod crate::bbox;
 // mod point;
@@ -1516,6 +1516,38 @@ impl BookshelfCircuit {
         v
     }
     pub fn net_wl(&self, n: &Net) -> f32 {
+        return self.net_wl_pos(n, &self.cellpos);
+
+        // let mut first = true;
+        // let mut llx = 0.0;
+        // let mut lly = 0.0;
+        // let mut urx = 0.0;
+        // let mut ury = 0.0;
+        // for pref in &n.pins {
+        //     let px =
+        //         self.cellpos[pref.parent_cell].x + self.cells[pref.parent_cell].pins[pref.index].dx;
+        //     let py =
+        //         self.cellpos[pref.parent_cell].y + self.cells[pref.parent_cell].pins[pref.index].dy;
+
+        //     if first {
+        //         llx = px;
+        //         urx = px;
+        //         lly = py;
+        //         ury = py;
+        //         first = false;
+        //     } else {
+        //         llx = llx.min(px);
+        //         urx = urx.max(px);
+        //         lly = lly.min(py);
+        //         ury = ury.max(py);
+        //     }
+        // }
+        // let len = (urx - llx) + (ury - lly);
+
+        // len
+    }
+
+    pub fn net_wl_pos(&self, n: &Net, pos: &Vec<point::Point>) -> f32 {
         let mut first = true;
         let mut llx = 0.0;
         let mut lly = 0.0;
@@ -1523,9 +1555,9 @@ impl BookshelfCircuit {
         let mut ury = 0.0;
         for pref in &n.pins {
             let px =
-                self.cellpos[pref.parent_cell].x + self.cells[pref.parent_cell].pins[pref.index].dx;
+                pos[pref.parent_cell].x + self.cells[pref.parent_cell].pins[pref.index].dx;
             let py =
-                self.cellpos[pref.parent_cell].y + self.cells[pref.parent_cell].pins[pref.index].dy;
+                pos[pref.parent_cell].y + self.cells[pref.parent_cell].pins[pref.index].dy;
 
             if first {
                 llx = px;
@@ -1542,7 +1574,7 @@ impl BookshelfCircuit {
         }
         let len = (urx - llx) + (ury - lly);
 
-        len
+        len        
     }
 
     pub fn wl(&self) -> f32 {

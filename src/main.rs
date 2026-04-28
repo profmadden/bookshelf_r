@@ -54,13 +54,29 @@ struct Args {
     /// export AUX and associated files
     #[argh(option, short = 'x')]
     export: Option<String>,
+
+    /// scan testing
+    #[argh(switch)]
+    scantest: bool,
 }
+
+use scan_fmt::scan_fmt;
+
 
 fn main() {
     println!("Main program for bookshelf reader.\n");
 
     let arguments: Args = argh::from_env();
 
+    if arguments.scantest {
+        let string = "i_cache_subsystem/i_icache/sram_block[0].data_sram/macro_mem[0].i_ram 999 9999".to_string();
+        //if let Ok(s) = scan_fmt!(&string, "{[a-zA-Z().]}", String) {
+        if let Ok(s) = scan_fmt!(&string, " {}", String) {
+            println!("Scanned in {s}");
+        }
+        println!("Done with scan test.");
+        return;
+    }
     if arguments.flipdemo {
         println!("Flip demo.");
         flipdemo();
@@ -192,6 +208,7 @@ fn main() {
 use bookshelf_r::bookshelf::Cell;
 use bookshelf_r::bookshelf::Orientation;
 use pstools::PSTool;
+use scan_fmt::parse::scan;
 
 fn show_cell(cell: &mut Cell, orient: Orientation, offset: f32, pst: &mut PSTool) {
     bookshelf_r::bookshelf::BookshelfCircuit::orient_cell(cell, orient);
