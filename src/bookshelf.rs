@@ -1547,6 +1547,11 @@ impl BookshelfCircuit {
         // len
     }
 
+    /// For some tasks -- detail placement, for example -- it is useful
+    /// to be able to calculate net wire lengths, given a set of locations
+    /// for cells (and not the locations included with the BookshelfCircuit struct).
+    /// The pos array should be as large as the number of cells in the circuit, and
+    /// use the same indexing.
     pub fn net_wl_pos(&self, n: &Net, pos: &Vec<point::Point>) -> f32 {
         let mut first = true;
         let mut llx = 0.0;
