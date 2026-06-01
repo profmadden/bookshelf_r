@@ -259,10 +259,13 @@ pub fn flipdemo() {
         name: "test.".to_string(),
         original_w: 100.0,
         original_h: 200.0,
+        min_aspect: 0.0,
+        max_aspect: 0.0,
         pins: Vec::new(),
         terminal: false,
         soft: None,
         is_macro: false,
+        is_soft: false,
         can_rotate: true,
     };
     c.pins.push(PinInstance {

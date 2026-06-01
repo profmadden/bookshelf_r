@@ -173,12 +173,15 @@ pub struct Cell {
     /// of pins as necessary
     pub original_w: f32,
     pub original_h: f32,
+    pub min_aspect: f32, // Limits of aspect ratios
+    pub max_aspect: f32,
     // pub x: f32,
     // pub y: f32,
     pub pins: Vec<PinInstance>,
     pub terminal: bool,
     pub soft: Option<SoftSize>,
     pub is_macro: bool,
+    pub is_soft: bool,
     pub can_rotate: bool,
 }
 
@@ -261,6 +264,7 @@ pub struct BookshelfCircuit {
     pub num_cells: usize,
     /// Easy access row height
     pub row_height: f32,
+    pub is_blockpacking: bool,
 }
 
 pub struct Display {
@@ -350,6 +354,7 @@ impl BookshelfCircuit {
             num_macros: 0,
             num_terminals: 0,
             row_height: 0.0,
+            is_blockpacking: false,
         };
 
         bc
@@ -784,12 +789,15 @@ impl BookshelfCircuit {
                     h: yf,
                     original_w: xf,
                     original_h: yf,
+                    min_aspect: 0.0,
+                    max_aspect: 0.0,
                     // x: 0.0,
                     // y: 0.0,
                     pins: Vec::new(),
                     terminal: isterminal,
                     soft: None,
                     is_macro: false,
+                    is_soft: false,
                     can_rotate: false,
                 };
 
@@ -1835,10 +1843,13 @@ impl BookshelfCircuit {
                             h: h,
                             original_w: w,
                             original_h: h,
+                            min_aspect: 0.0,
+                            max_aspect: 0.0,
                             pins: Vec::new(),
                             terminal: false,
                             soft: None,
                             is_macro: false,
+                            is_soft: false,
                             can_rotate: false,
                         };
                         self.cells.push(c);
@@ -1856,10 +1867,13 @@ impl BookshelfCircuit {
                             h: h,
                             original_w: w,
                             original_h: h,
+                            min_aspect: min_aspect,
+                            max_aspect: max_aspect,
                             pins: Vec::new(),
                             terminal: false,
                             soft: None,
                             is_macro: true,
+                            is_soft: true,
                             can_rotate: true
                         };
                         self.cells.push(c);
@@ -1879,10 +1893,13 @@ impl BookshelfCircuit {
                             h: 1.0,
                             original_w: 1.0,
                             original_h: 1.0,
+                            min_aspect: 0.0,
+                            max_aspect: 0.0,
                             pins: Vec::new(),
                             terminal: true,
                             soft: None,
                             is_macro: false,
+                            is_soft: false,
                             can_rotate: true,
                         });
                         self.cellpos.push(point::Point { x: 0.0, y: 0.0 });
