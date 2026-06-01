@@ -7,7 +7,10 @@ pub mod marklist;
 use std::path::Path;
 
 use argh::FromArgs;
+use bookshelf_r::bookshelf::HyperParams;
 use bookshelf_r::bookshelf::{PinDetail, PinInstance};
+use metapartition;
+
 #[derive(FromArgs)]
 /// Bookshelf template reader
 struct Args {
@@ -58,8 +61,13 @@ struct Args {
     /// scan testing
     #[argh(switch)]
     scantest: bool,
+
+    /// partition the circuit
+    #[argh(switch)]
+    partition: bool,
 }
 
+use metapartition::metapartitioner::Metapartitioner;
 use scan_fmt::scan_fmt;
 
 
@@ -108,6 +116,19 @@ fn main() {
         println!("Bookshelf Block Packing Reader");
         bc = bookshelf::BookshelfCircuit::read_blockpacking(auxname);
         bc.summarize();
+    }
+
+    if arguments.partition {
+        let mut params = bookshelf::HyperParams::new(&bc);
+        let mut cells = Vec::new();
+        for i in 0..bc.cells.len() {
+            cells.push(i);
+        }
+
+        let hg = bc.build_graph(&cells, &mut params);
+        let mp = Metapartitioner::new();
+        let (left, right, cut) = mp.hg_partition(&hg);
+        println!("Cut {cut}");
     }
     if arguments.cell.is_some() {
         let mut wlc = bookshelf::WlCalc::new(&bc);

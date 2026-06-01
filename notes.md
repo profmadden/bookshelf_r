@@ -59,3 +59,16 @@ pads also changing).
 Also should move from using the PSTools box, to a
 3D box (handy for 3D placement).  Default box will
 be with a Z location from 0.0 to 1.0.
+
+### 20260601
+
+Modified the hypergraph construction, to eliminate
+duplicate vertices on a net (the IBM HB+ has
+nets that have multiple pins on the same cell).
+Required modifying the terminal propagation to use
+the block location, rather than the pin location.
+Should be OK.
+
+Pushing, and this might clear up the errors generated
+in fsdc_r for the IBM HB+.
+

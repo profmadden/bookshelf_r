@@ -49,6 +49,7 @@ use pstools;
 use std::fmt;
 
 use hypergraph::hypergraph;
+use metapartition;
 
 /// PinInstances are in the vector for the cells.
 #[derive(Clone)]
@@ -2022,6 +2023,26 @@ impl BookshelfCircuit {
     //         eptr: Vec::new()
     //     }
     // }
+    pub fn clean_list(list: &Vec<usize>) -> Vec<usize> {
+        let mut rv = Vec::new();
+        for i in 0..list.len() {
+            if i == 0 || list[i] != list[i - 1] {
+                rv.push(list[i]);
+            }
+        }
+
+        rv
+    }
+    pub fn cells_unique(&self, net_id: usize) -> Vec<usize> {
+        let mut rv = Vec::new();
+
+        for pr in &self.nets[net_id].pins {
+            rv.push(pr.parent_cell);
+        }
+        rv.sort();
+
+        BookshelfCircuit::clean_list(&rv)
+    }
     pub fn build_graph(&self, cells: &Vec<usize>, params: &mut HyperParams) -> HyperGraph {
         params.cellmark.clear();
         params.netmark.clear();
@@ -2054,14 +2075,19 @@ impl BookshelfCircuit {
 
         for net_id in &params.netmark.list {
             // println!(" Marked net {} {}", nidx, ckt.nets[*nidx].name);
-            for pr in &self.nets[*net_id].pins {
+            let mut cell_ids = self.cells_unique(*net_id);
+
+            for cell_id in &cell_ids {
                 // println!("  Ref cell {} marked: {}", pr.parentCell, cellmark.marked[pr.parentCell]);
-                if params.cellmark.marked[pr.parent_cell] {
+                if params.cellmark.marked[*cell_id] {
                     cardinality[params.netmark.index[*net_id]] =
                         cardinality[params.netmark.index[*net_id]] + 1;
+                    // cell_ids.push(pr.parent_cell);
                 } else {
                     if params.term_prop {
-                        let (px, py) = self.pinloc(pr);
+                        // let (px, py) = self.pinloc(pr);
+                        let px = self.cellpos[*cell_id].x;
+                        let py = self.cellpos[*cell_id].y;
                         // Check with horizontal, vertical, set the sinks
                         let split_value;
                         if params.horizontal {
@@ -2077,6 +2103,16 @@ impl BookshelfCircuit {
                         }
                     }
                 }
+            }
+
+            // Deduplicate cell IDs -- might have a cell that has multiple pins
+            // for the same net, and that screws up the hypergraph partitioners.
+            // Seems to happen a lot on the IBM HB+ benchmarks.
+            // cell_ids.sort();
+            // let cell_ids = BookshelfCircuit::clean_list(&cell_ids);
+            if cell_ids.len() != cardinality[params.netmark.index[*net_id]] {
+                println!("DUPLICATE PIN {}", self.nets[*net_id].name);
+                cardinality[params.netmark.index[*net_id]] = cell_ids.len();
             }
             // Add to propagated if we need to
             if cardinality[params.netmark.index[*net_id]] == 0 {
@@ -2141,10 +2177,12 @@ impl BookshelfCircuit {
         for net_id in &params.netmark.list {
             let mut card = 0;
 
-            for pr in &self.nets[*net_id].pins {
-                if params.cellmark.marked[pr.parent_cell] {
+            let mut cell_ids = self.cells_unique(*net_id);
+
+            for cell_id in &cell_ids {
+                if params.cellmark.marked[*cell_id] {
                     hg.eptr
-                        .push(params.cellmark.index[pr.parent_cell] as c_uint);
+                        .push(params.cellmark.index[*cell_id] as c_uint);
                     card = card + 1;
                 }
             }

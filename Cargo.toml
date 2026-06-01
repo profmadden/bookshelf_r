@@ -12,6 +12,6 @@ sscanf = "0.4.2"
 pstools = {git = "https://github.com/profmadden/pstools_r"}
 # pstools = "0.1.0"
 hypergraph = { git = "https://github.com/profmadden/hypergraph_bu", package = "hypergraph_bu"}
-metapartition = {git = "https://github.com/profmadden/metapartition"}
+metapartition = {git = "https://github.com/profmadden/metapartition", features=["kahypar"]}
 argh = "0.1.13"
 # malduit = {path = "malduit"}
