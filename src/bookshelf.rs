@@ -2111,7 +2111,7 @@ impl BookshelfCircuit {
             // cell_ids.sort();
             // let cell_ids = BookshelfCircuit::clean_list(&cell_ids);
             if cell_ids.len() != cardinality[params.netmark.index[*net_id]] {
-                println!("DUPLICATE PIN {}", self.nets[*net_id].name);
+                // println!("DUPLICATE PIN {}", self.nets[*net_id].name);
                 cardinality[params.netmark.index[*net_id]] = cell_ids.len();
             }
             // Add to propagated if we need to
