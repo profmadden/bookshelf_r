@@ -17,4 +17,5 @@ hypergraph = { git = "https://github.com/profmadden/hypergraph_bu", package = "h
 # Bookshelf *will* create a hypergraph structure that can be used by metapartition.
 metapartition = {git = "https://github.com/profmadden/metapartition", features=[]}
 argh = "0.1.13"
+lineio = "0.1.2"
 # malduit = {path = "malduit"}
