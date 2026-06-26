@@ -18,4 +18,5 @@ hypergraph = { git = "https://github.com/profmadden/hypergraph_bu", package = "h
 metapartition = {git = "https://github.com/profmadden/metapartition", features=[]}
 argh = "0.1.13"
 lineio = "0.1.2"
+scanf = "2.0.0"
 # malduit = {path = "malduit"}

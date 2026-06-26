@@ -47,6 +47,7 @@ use pstools::point;
 
 use pstools;
 use std::fmt;
+use scanf;
 
 use hypergraph::hypergraph;
 use metapartition;
@@ -287,6 +288,13 @@ pub struct Display {
     pub rows: bool,
 }
 
+impl Display {
+    pub fn new() -> Display {
+        Display { cells: true, color_cells: true, labels: true, movement: false, terminals: true, notes: true, boundingbox: true, rows: false }
+    }
+}
+
+
 /// WlCalc contains information needed for fast wire length
 /// calculations
 pub struct WlCalc {
@@ -366,7 +374,7 @@ impl BookshelfCircuit {
         pst.add_box(offset_x + llx * scale, offset_y + lly * scale, offset_x + urx * scale, offset_y + ury * scale);
     }
 
-    pub fn ps_terminals(&self, pst: &mut PSTool) {
+    pub fn ps_terminals(&self, pst: &mut PSTool, display: &Display) {
         // Terminals n the background
         pst.set_color(1.0, 0.3, 0.3, 1.0);
         for i in 0..self.cells.len() {
@@ -381,7 +389,7 @@ impl BookshelfCircuit {
             }
         }
     }
-    pub fn ps_cells(&self, pst: &mut PSTool) {
+    pub fn ps_cells(&self, pst: &mut PSTool, display: &Display) {
         pst.set_color(0.4, 0.4, 1.0, 1.0);
         let (scale, offset_x, offset_y) = pst.get_scale();
         for i in 0..self.cells.len() {
@@ -398,10 +406,11 @@ impl BookshelfCircuit {
                 //));
             }
         }
-        pst.set_color(0.5, 0.2, 0.2, 1.0);
+        pst.set_color(0.0, 0.0, 0.0, 1.0);
+        pst.set_fill_color(0.8, 0.8, 1.0, 1.0);
         for i in 0..self.cells.len() {
             if !self.cells[i].terminal && self.cells[i].is_macro {
-                pst.add_box(self.cellpos[i].x + 0.25, self.cellpos[i].y + 0.25, 
+                pst.add_filled_box(self.cellpos[i].x + 0.25, self.cellpos[i].y + 0.25, 
                     self.cellpos[i].x + self.cells[i].w - 0.5, 
                     self.cellpos[i].y + self.cells[i].h - 0.5);
                 // pst.add_postscript(format!(
@@ -433,7 +442,7 @@ impl BookshelfCircuit {
     }
     /// Generate PostScript for the cell and macro positions, using
     /// the cell color group (or cell index if that does not exist).
-    pub fn ps_color_cells(&self, pst: &mut PSTool) {
+    pub fn ps_color_cells(&self, pst: &mut PSTool, display: &Display) {
         let (scale, offset_x, offset_y) = pst.get_scale();
 
         for i in 0..self.cells.len() {
@@ -457,7 +466,7 @@ impl BookshelfCircuit {
             // ));
         }
     }
-    pub fn ps_labels(&self, pst: &mut PSTool) {
+    pub fn ps_labels(&self, pst: &mut PSTool, display: &Display) {
         pst.set_color(0.1, 0.1, 0.0, 1.0);
         pst.set_font(self.row_height * 0.3, "Courier".to_string());
         for i in 0..self.cells.len() {
@@ -470,7 +479,7 @@ impl BookshelfCircuit {
             }
         }
     }
-    pub fn ps_movement(&self, pst: &mut PSTool) {
+    pub fn ps_movement(&self, pst: &mut PSTool, display: &Display) {
         if self.refpos.is_none() {
             return;
         }
@@ -511,7 +520,7 @@ impl BookshelfCircuit {
         }
     }
 
-    pub fn ps_stats(&self, pst: &mut PSTool) {
+    pub fn ps_stats(&self, pst: &mut PSTool, display: &Display) {
         // Scale  the font
         let b = self.core();
         let height = 0.01 * b.dy(); // Font height is 1% of core height, should give 100 lines of text if needed
@@ -544,11 +553,13 @@ impl BookshelfCircuit {
         // pst.add_postscript("ox oy h add lineto".to_string());
         // pst.add_postscript("closepath stroke} def".to_string());
         let mut pst = self.postscript_prep();
+        let display = Display::new();
 
-        self.ps_terminals(&mut pst);
 
-        self.ps_cells(&mut pst);
-        self.ps_stats(&mut pst);
+        self.ps_terminals(&mut pst, &display);
+
+        self.ps_cells(&mut pst, &display);
+        self.ps_stats(&mut pst, &display);
 
         pst.set_border(40.0);
         pst.generate(filename).unwrap();
@@ -588,22 +599,22 @@ impl BookshelfCircuit {
 
     pub fn postscript_display(&self, pst: &mut PSTool, display: &Display) {
         if display.cells {
-            self.ps_cells(pst);
+            self.ps_cells(pst, display);
         }
         if display.color_cells {
-            self.ps_color_cells(pst);
+            self.ps_color_cells(pst, display);
         }
         if display.movement {
-            self.ps_movement(pst);
+            self.ps_movement(pst, display);
         }
         if display.terminals {
-            self.ps_terminals(pst);
+            self.ps_terminals(pst, display);
         }
         if display.boundingbox {
             self.ps_box(pst);
         }
         if display.notes {
-            self.ps_stats(pst);
+            self.ps_stats(pst, display);
         }
     }
 
@@ -1106,13 +1117,31 @@ impl BookshelfCircuit {
             Ok(reader) => reader,
             Err(error) => {panic!{"Failed to open a file {error}"};}
         };
-        println!("READING PLX NOT WORKING YET");
+        
         loop {
             let s = match lineio.getline() {
                 Ok(str) => str,
                 Err(_error) => break,
             };
-            println!("PLX {s}");
+            // println!("PLX {s}");
+            let parsed = sscanf::sscanf!(s, "{str} {f32} {f32} {f32} {f32} : {str}");
+            if parsed.is_ok() {
+                let (name, x, y, w, h, orient) = parsed.unwrap();
+                // println!("PLX {} at {} {}", name, x, y);
+                let n = name.trim().to_string();
+                let idx = self.cell_index(&n);
+                if idx.is_some() {
+                    // println!("FOUND Cell {} is index {}", n, idx.unwrap());
+                    let ci = idx.unwrap();
+                    self.cellpos[ci].x = x;
+                    self.cellpos[ci].y = y;
+                    self.cells[ci].w = w;
+                    self.cells[ci].h = h;
+                    self.centerpin(ci);
+                } else {
+                    println!("PLX error: cell {} not found", n);
+                }
+            }
         }
 
         0

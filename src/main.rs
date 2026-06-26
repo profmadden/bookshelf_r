@@ -34,6 +34,10 @@ struct Args {
     #[argh(option, short = 'p')]
     plfile: Option<String>,
 
+    /// plx file
+    #[argh(option, short = 'X')]
+    plxfile: Option<String>,
+
     /// output PL file
     #[argh(option, short = 'o')]
     output_pl: Option<String>,
@@ -118,6 +122,9 @@ fn main() {
         bc.summarize();
     }
 
+    if arguments.plxfile.is_some() {
+        bc.read_plx(&arguments.plxfile.unwrap());
+    }
     if arguments.partition {
         let mut params = bookshelf::HyperParams::new(&bc);
         let mut cells = Vec::new();
@@ -215,7 +222,8 @@ fn main() {
 
     if arguments.colorize.is_some() {
         let mut pst = &mut bc.postscript_prep();
-        bc.ps_color_cells(&mut pst);
+        let display = bookshelf::Display::new();
+        bc.ps_color_cells(&mut pst, &display);
         pst.generate(arguments.colorize.unwrap().clone()).unwrap();
     }
     if arguments.output_pl.is_some() {
