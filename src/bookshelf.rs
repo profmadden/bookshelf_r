@@ -36,6 +36,7 @@ use std::io::Write;
 use std::path::Path;
 
 use pstools::PSTool;
+// Have bbox as a module now.... 
 pub mod bbox;
 use bbox::Point;
 use bbox::BBox;
