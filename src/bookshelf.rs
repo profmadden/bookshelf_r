@@ -18,7 +18,8 @@
 //! hypergraphs for a portion of a circuit, as needed.
 extern crate libc;
 use libc::c_char;
-use pstools::bbox::BBox;
+// use pstools::bbox::BBox;
+use bbox::BBox;
 use std::cmp;
 use std::collections::HashMap;
 use std::ffi::CStr;
