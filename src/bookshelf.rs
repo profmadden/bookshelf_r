@@ -19,7 +19,7 @@
 extern crate libc;
 use libc::c_char;
 // use pstools::bbox::BBox;
-use bbox::BBox;
+// use bbox::BBox;
 use std::cmp;
 use std::collections::HashMap;
 use std::ffi::CStr;
@@ -36,13 +36,23 @@ use std::io::Write;
 use std::path::Path;
 
 use pstools::PSTool;
+pub mod bbox;
+use bbox::Point;
+use bbox::BBox;
 
 const LDBG: bool = false;
 
 // mod crate::bbox;
 // mod point;
-use pstools::bbox;
-use pstools::point;
+// use pstools::bbox;
+// use pstools::point;
+// use crate::bbox;
+// use crate::point;
+// use crate::bbox::BBox;
+// use crate::point::Point;
+
+//use point::Point as Point;
+//use crate::bbox::BBox as BBox;
 
 // use crate::point;
 
@@ -208,13 +218,15 @@ pub struct Macro {
     pub pins: Vec<PinInstance>,
 }
 
+// use crate::bbox::BBox as BBox;
+// use crate::point::Point as Point;
 pub struct Row {
     pub name: String,
-    pub bounds: bbox::BBox,
+    pub bounds: BBox,
     pub site_spacing: f32,
 }
 pub struct Testme {
-    pub p: point::Point,
+    pub p: Point,
     pub v: f32,
 }
 
@@ -241,13 +253,13 @@ pub struct BookshelfCircuit {
     pub counter: i32,
     pub name: String,
     pub cells: Vec<Cell>,
-    pub cellpos: Vec<point::Point>,
+    pub cellpos: Vec<Point>,
     /// Optional cell coloring scheme.  If present, each cell/macro
     /// will be colored based on the index -- will need to implement
     /// a basic color selection mechanism.
     pub cell_color: Option<Vec<usize>>,
     /// Optional reference position
-    pub refpos: Option<Vec<point::Point>>,
+    pub refpos: Option<Vec<Point>>,
     pub orient: Vec<Orientation>,
     pub nets: Vec<Net>,
     pub macros: Vec<Macro>,
@@ -666,12 +678,12 @@ impl BookshelfCircuit {
     }
 
     // Set the cell position -- the point is the center, we adjust for lower left
-    pub fn set_cell_center(&mut self, cid: usize, loc: &point::Point) {
+    pub fn set_cell_center(&mut self, cid: usize, loc: &Point) {
         self.cellpos[cid].x = loc.x - self.cells[cid].w / 2.0;
         self.cellpos[cid].y = loc.y - self.cells[cid].h / 2.0;
     }
 
-    pub fn set_cell_centers(&mut self, cells: &Vec<usize>, loc: &point::Point) {
+    pub fn set_cell_centers(&mut self, cells: &Vec<usize>, loc: &Point) {
         for cid in cells {
             self.set_cell_center(*cid, loc);
         }
@@ -816,9 +828,10 @@ impl BookshelfCircuit {
 
                 self.cells.push(c);
 
-                let cp = point::Point {
+                let cp = Point {
                     x: 0.0,
                     y: 0.0,
+                    z: 0.0,
                     // orientation: 0,
                 };
                 self.cellpos.push(cp);
@@ -1388,7 +1401,7 @@ impl BookshelfCircuit {
 
             // End line
             let _line = BookshelfCircuit::getline(&mut reader).unwrap();
-            let mut bounds = bbox::BBox::new();
+            let mut bounds = BBox::new();
             bounds.addpoint(origin, coordinate);
             bounds.addpoint(origin + numsites * sitewidth, coordinate + height);
             self.rows.push(Row {
@@ -1457,8 +1470,8 @@ impl BookshelfCircuit {
 
         tot_area
     }
-    pub fn cell_bounds(&self) -> bbox::BBox {
-        let mut bb = bbox::BBox::new();
+    pub fn cell_bounds(&self) -> BBox {
+        let mut bb = BBox::new();
         for c in 0..self.cells.len() {
             if !self.cells[c].terminal {
                 bb.addpoint(self.cellpos[c].x, self.cellpos[c].y);
@@ -1647,7 +1660,7 @@ impl BookshelfCircuit {
     /// for cells (and not the locations included with the BookshelfCircuit struct).
     /// The pos array should be as large as the number of cells in the circuit, and
     /// use the same indexing.
-    pub fn net_wl_pos(&self, n: &Net, pos: &Vec<point::Point>) -> f32 {
+    pub fn net_wl_pos(&self, n: &Net, pos: &Vec<Point>) -> f32 {
         let mut first = true;
         let mut llx = 0.0;
         let mut lly = 0.0;
@@ -1666,10 +1679,10 @@ impl BookshelfCircuit {
                 ury = py;
                 first = false;
             } else {
-                llx = llx.min(px);
-                urx = urx.max(px);
-                lly = lly.min(py);
-                ury = ury.max(py);
+                llx = f32::min(llx, px); // llx.min(px as f32);
+                urx = f32::max(urx, px); // urx.max(px as f32);
+                lly = f32::min(llx, py); // lly.min(py as f32);
+                ury = f32::max(ury, py); // ury.max(py as f32);
             }
         }
         let len = (urx - llx) + (ury - lly);
@@ -1708,10 +1721,10 @@ impl BookshelfCircuit {
                     ury = py;
                     first = false;
                 } else {
-                    llx = llx.min(px);
-                    urx = urx.max(px);
-                    lly = lly.min(py);
-                    ury = ury.max(py);
+                    llx = f32::min(llx, px); // llx.min(px as f32);
+                    urx = f32::max(urx, px); // urx.max(px as f32);
+                    lly = f32::min(llx, py); // lly.min(py as f32);
+                    ury = f32::max(ury, py); // ury.max(py as f32);
                 }
             }
             let len = (urx - llx) + (ury - lly);
@@ -1744,8 +1757,8 @@ impl BookshelfCircuit {
         }
     }
 
-    pub fn core(&self) -> bbox::BBox {
-        let mut result = bbox::BBox::new();
+    pub fn core(&self) -> BBox {
+        let mut result = BBox::new();
         if self.rows.len() > 0 {
             for r in &self.rows {
                 result.expand(&r.bounds);
@@ -1760,7 +1773,7 @@ impl BookshelfCircuit {
         result
     }
 
-    pub fn bounds(&self) -> bbox::BBox {
+    pub fn bounds(&self) -> BBox {
         let mut result = self.core(); // Get the bounds of the placement area
         for c in 0..self.cells.len() {
             let cp = &self.cellpos[c];
@@ -1770,7 +1783,7 @@ impl BookshelfCircuit {
         }
         result
     }
-    pub fn mincore(&self) -> bbox::BBox {
+    pub fn mincore(&self) -> BBox {
         let mut core = self.core();
         let mut total = 0.0;
         for i in 0..self.cells.len() {
@@ -1798,7 +1811,7 @@ impl BookshelfCircuit {
 
         mincore
     }
-    pub fn leftcore(&self) -> bbox::BBox {
+    pub fn leftcore(&self) -> BBox {
         let mut core = self.core();
         let mut total = 0.0;
         for i in 0..self.cells.len() {
@@ -1960,7 +1973,7 @@ impl BookshelfCircuit {
                             can_rotate: false,
                         };
                         self.cells.push(c);
-                        let cp = point::Point { x: 0.0, y: 0.0 };
+                        let cp = Point { x: 0.0, y: 0.0, z: 0.0 };
                         self.cellpos.push(cp);
                         self.orient.push(Orientation::N);
                     }
@@ -1984,7 +1997,7 @@ impl BookshelfCircuit {
                             can_rotate: true
                         };
                         self.cells.push(c);
-                        let cp = point::Point{x: 0.0, y: 0.0};
+                        let cp = bbox::Point{x: 0.0, y: 0.0, z: 0.0};
                         self.cellpos.push(cp);
                         self.orient.push(Orientation::N);
                     }
@@ -2009,7 +2022,7 @@ impl BookshelfCircuit {
                             is_soft: false,
                             can_rotate: true,
                         });
-                        self.cellpos.push(point::Point { x: 0.0, y: 0.0 });
+                        self.cellpos.push(Point { x: 0.0, y: 0.0, z: 0.0 });
                         self.orient.push(Orientation::N);
                     }
                 }
