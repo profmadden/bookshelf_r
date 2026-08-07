@@ -65,6 +65,7 @@ impl BBox {
         point::Point {
             x: (self.urx + self.llx) / 2.0,
             y: (self.ury + self.lly) / 2.0,
+            z: 0.0,
         }
     }
     pub fn expand(&mut self, other: &BBox) {

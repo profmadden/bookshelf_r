@@ -20,6 +20,8 @@
 //! `metapartition` crate.
 pub mod bookshelf;
 pub mod marklist;
+pub mod bbox;
+pub mod point;
 // pub extern crate metapartition;
 
 // pub mod hypergraph;
