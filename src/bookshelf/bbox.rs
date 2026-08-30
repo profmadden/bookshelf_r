@@ -81,11 +81,14 @@ impl BBox {
     pub fn dy(&self) -> f32 {
         self.ury - self.lly
     }
+    pub fn dz(&self) -> f32 {
+        self.urz - self.llz
+    }
     pub fn center(&self) -> Point {
         Point {
             x: (self.urx + self.llx) / 2.0,
             y: (self.ury + self.lly) / 2.0,
-            z: 0.0,
+            z: self.llz,
         }
     }
     pub fn expand(&mut self, other: &BBox) {
@@ -109,6 +112,16 @@ impl BBox {
         let dx = self.dx();
         left.urx = left.llx + bias * dx;
         right.llx = left.urx;
+        (left, right)
+    }
+    pub fn split_z(&self, bias: f32) -> (BBox, BBox) {
+        let dz = self.urz - self.llz;
+
+        let mut left = *self;
+        let mut right = *self;
+
+        left.urz = self.llz + dz*bias;
+        right.llz = left.urz;
         (left, right)
     }
 }
