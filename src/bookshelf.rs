@@ -407,9 +407,11 @@ impl BookshelfCircuit {
         // Terminals n the background
         pst.set_color(0.0, 0.0, 0.0, 1.0);
         for i in 0..self.cells.len() {
-            let x = self.cellpos[i].x + self.cells[i].w * 0.4;
-            let y = self.cellpos[i].y + self.cells[i].h * 0.4;
-            pst.add_text(x, y, self.cells[i].name.clone());
+            let x = self.cellpos[i].x + 0.4;
+            let y = self.cellpos[i].y + 1.5;
+            if !self.cells[i].terminal {
+                pst.add_text(x, y, self.cells[i].name.clone());
+            }
         }        
     }
     pub fn ps_cells(&self, pst: &mut PSTool, display: &Display) {
