@@ -403,6 +403,15 @@ impl BookshelfCircuit {
             }
         }
     }
+    pub fn ps_cellnames(&self, pst: &mut PSTool, display: &Display) {
+        // Terminals n the background
+        pst.set_color(0.0, 0.0, 0.0, 1.0);
+        for i in 0..self.cells.len() {
+            let x = self.cellpos[i].x + self.cells[i].w * 0.4;
+            let y = self.cellpos[i].y + self.cells[i].h * 0.4;
+            pst.add_text(x, y, self.cells[i].name.clone());
+        }        
+    }
     pub fn ps_cells(&self, pst: &mut PSTool, display: &Display) {
         pst.set_color(0.4, 0.4, 1.0, 1.0);
         let (scale, offset_x, offset_y) = pst.get_scale();
@@ -570,9 +579,11 @@ impl BookshelfCircuit {
         let display = Display::new();
 
 
-        self.ps_terminals(&mut pst, &display);
+
 
         self.ps_cells(&mut pst, &display);
+        self.ps_terminals(&mut pst, &display);        
+        // self.ps_cellnames(&mut pst, &display);
         self.ps_stats(&mut pst, &display);
 
         pst.set_border(40.0);
@@ -624,6 +635,7 @@ impl BookshelfCircuit {
         if display.terminals {
             self.ps_terminals(pst, display);
         }
+        self.ps_cellnames(pst, &display);
         if display.boundingbox {
             self.ps_box(pst);
         }
