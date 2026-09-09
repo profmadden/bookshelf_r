@@ -1738,7 +1738,7 @@ impl BookshelfCircuit {
                 } else {
                     llx = f32::min(llx, px); // llx.min(px as f32);
                     urx = f32::max(urx, px); // urx.max(px as f32);
-                    lly = f32::min(llx, py); // lly.min(py as f32);
+                    lly = f32::min(lly, py); // lly.min(py as f32);
                     ury = f32::max(ury, py); // ury.max(py as f32);
                 }
             }
