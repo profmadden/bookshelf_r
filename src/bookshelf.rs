@@ -310,7 +310,7 @@ fn default_grey() -> Vec<f32> {
 }
 
 fn default_underlay() -> Vec<f32> {
-    vec![0.0, 0.0, 0.4]
+    vec![0.8, 1.0, 0.8]
 }
 
 fn default_font_size() -> f32 {
@@ -806,6 +806,9 @@ impl BookshelfCircuit {
 
     pub fn postscript_display(&self, pst: &mut PSTool, display: &PostscriptDisplay) {
         // Save the notes in the comments
+        let version = option_env!("BOOKSHELFGIT_HASH").unwrap_or(&"no hash");
+        pst.add_comment(format!("Bookshelf git rev: {}", version));
+
         for n in &self.notes {
             pst.add_comment(n.clone());
         }
@@ -885,7 +888,75 @@ impl BookshelfCircuit {
         pst.set_border(40.0);
         pst.generate(filename).unwrap();
     }
-/// postscript_prep is deprecated - the definitions and functions
+
+    /// Returns statistics about the current design.  The
+    /// * Number of macro blocks
+    /// * Number of standard cells
+    /// * Number of terminals
+    /// * HWPL
+    /// * Total area of logic elements (macros, cells)
+    /// * macro area
+    /// * cell area
+    /// * Total area of rows
+    /// * Utilization versus rows
+    /// * Bounding box of logic elements
+    /// * Utilization versus logic element bounding box
+    /// * Deadspace of element bounding box (1.0 - above)
+    /// 
+    /// let (num_macro, num_cell, num_terminal, hpwl, total_area, macro_area, cell_area, row_area, util_row, bbox, util_box, deadspace) = bc.statistics();
+    pub fn statistics(&self, print: bool) -> (usize, usize, usize, f32, f32, f32, f32, f32, f32, BBox, f32, f32) {
+        let mut num_terminal = 0;
+        let mut num_macro = 0;
+        let mut num_cell = 0;
+        let mut total_area = 0.0;
+        let mut macro_area = 0.0;
+        let mut cell_area = 0.0;
+        let mut row_area = 0.0;
+
+        for i in 0..self.cells.len() {
+            if self.cells[i].terminal {
+                num_terminal += 1;
+            } else {
+                if self.cells[i].is_macro {
+                    num_macro += 1;
+                    macro_area += self.cells[i].area();
+                } else {
+                    num_cell += 1;
+                    cell_area += self.cells[i].area();
+                }
+            }
+        }
+        for i in 0..self.rows.len() {
+            row_area += self.rows[i].bounds.area();
+        }
+        total_area = cell_area + macro_area;
+
+        let util_row = total_area / row_area;
+        let bbox = self.circuit_bounds();
+        let util_box = total_area/bbox.area();
+        let deadspace = 1.0 - util_box;
+        let hpwl = self.wl();
+
+        if print {
+            println!("Number of macros:    {num_macro}");
+    println!("Number of cells:     {num_cell}");
+    println!("Number of terminals: {num_terminal}");
+    println!("HPWL:                {hpwl}");
+    println!("Area of circuit:     {total_area}");
+    println!("Area of macros:      {macro_area}");
+    println!("Area of cells:       {cell_area}");
+    println!("Row area:            {row_area}");
+    println!("Row utilization:     {util_row}");
+    println!("Bounding box of ckt: {bbox}");
+    println!("BBox utilization:    {util_box}");
+    println!("Deadspace:           {deadspace}");
+        }
+
+        (num_macro, num_cell, num_terminal, hpwl, total_area, macro_area, cell_area, row_area, util_row, bbox, util_box, deadspace)
+        
+    }
+
+    /// postscript_prep is deprecated - the definitions and functions
     /// that were previously generated are now part of the PSTool
     /// crate
     pub fn postscript_prep(&self) -> PSTool {

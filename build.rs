@@ -8,5 +8,5 @@ fn main() {
     // note: add error checking yourself.
     let output = Command::new("git").args(&["rev-parse", "HEAD"]).output().unwrap();
     let git_hash = String::from_utf8(output.stdout).unwrap();
-    println!("cargo:rustc-env=PSTGIT_HASH={}", git_hash);
+    println!("cargo:rustc-env=BOOKSHELFGIT_HASH={}", git_hash);
 }
