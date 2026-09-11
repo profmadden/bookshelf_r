@@ -805,6 +805,10 @@ impl BookshelfCircuit {
     
 
     pub fn postscript_display(&self, pst: &mut PSTool, display: &PostscriptDisplay) {
+        // Save the notes in the comments
+        for n in &self.notes {
+            pst.add_comment(n.clone());
+        }
         pst.set_border(display.border);        
         pst.set_font(display.font_size, display.font.clone());
         if display.underlay {

@@ -11,6 +11,10 @@ use bookshelf_r::bookshelf::{HyperParams, PostscriptDisplay};
 use bookshelf_r::bookshelf::{PinDetail, PinInstance};
 use metapartition;
 
+use chrono::{Utc};
+use hostname;
+use std::env;
+
 #[derive(FromArgs)]
 /// Bookshelf template reader
 struct Args {
@@ -135,6 +139,18 @@ fn main() {
         bc.summarize();
     }
     bc.postscript_display = display_config;
+    bc.notes.push(Utc::now().to_string());
+    bc.notes
+            .push(format!("Host: {:?}", hostname::get().unwrap()));
+    let version = option_env!("PSTGIT_HASH").unwrap_or(&"no hash");
+    bc.notes.push(format!("PSTool git rev: {}", version));
+    let args: Vec<String> = env::args().collect();
+    let mut cmdline = "".to_string();
+    for v in &args {
+        cmdline = cmdline + " " + v;
+    }
+    bc.notes.push(cmdline);
+    
 
     if arguments.plxfile.is_some() {
         bc.read_plx(&arguments.plxfile.unwrap());
