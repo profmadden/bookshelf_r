@@ -1,0 +1,11 @@
+{
+    "display_cells": false,
+    "fill_cells": true,
+    "macro_labels": true,
+    "font_size": 7,
+    "note_font_size": 12,
+    "notes": true,
+    "underlay": true,
+    "underlay_color": [0.95, 1.0, 0.95],
+    "border": 0
+}

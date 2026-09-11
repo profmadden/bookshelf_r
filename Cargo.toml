@@ -19,4 +19,6 @@ metapartition = {git = "https://github.com/profmadden/metapartition", features=[
 argh = "0.1.13"
 lineio = "0.1.2"
 scanf = "2.0.0"
+serde = "1.0.229"
+serde_json = "1.0.151"
 # malduit = {path = "malduit"}

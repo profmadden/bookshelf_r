@@ -7,7 +7,7 @@ pub mod marklist;
 use std::path::Path;
 
 use argh::FromArgs;
-use bookshelf_r::bookshelf::HyperParams;
+use bookshelf_r::bookshelf::{HyperParams, PostscriptDisplay};
 use bookshelf_r::bookshelf::{PinDetail, PinInstance};
 use metapartition;
 
@@ -46,6 +46,10 @@ struct Args {
     #[argh(option, short = 'P')]
     postscript: Option<String>,
 
+    /// postscript display configurations
+    #[argh(option)]
+    config: Option<String>,
+
     /// display testing for PostScript output
     #[argh(option)]
     display_test: Option<String>,
@@ -74,14 +78,23 @@ struct Args {
 use metapartition::metapartitioner::Metapartitioner;
 use scan_fmt::scan_fmt;
 
-
 fn main() {
     println!("Main program for bookshelf reader.\n");
 
     let arguments: Args = argh::from_env();
 
+    let display_config;
+    if arguments.config.is_some() {
+        display_config =
+            bookshelf::PostscriptDisplay::from_json(&arguments.config.unwrap()).unwrap();
+    } else {
+        display_config = bookshelf::PostscriptDisplay::new();
+    }
+
     if arguments.scantest {
-        let string = "i_cache_subsystem/i_icache/sram_block[0].data_sram/macro_mem[0].i_ram 999 9999".to_string();
+        let string =
+            "i_cache_subsystem/i_icache/sram_block[0].data_sram/macro_mem[0].i_ram 999 9999"
+                .to_string();
         //if let Ok(s) = scan_fmt!(&string, "{[a-zA-Z().]}", String) {
         if let Ok(s) = scan_fmt!(&string, " {}", String) {
             println!("Scanned in {s}");
@@ -121,6 +134,7 @@ fn main() {
         bc = bookshelf::BookshelfCircuit::read_blockpacking(auxname);
         bc.summarize();
     }
+    bc.postscript_display = display_config;
 
     if arguments.plxfile.is_some() {
         bc.read_plx(&arguments.plxfile.unwrap());
@@ -193,7 +207,6 @@ fn main() {
         let mut display = bc.bookshelf_display();
         bc.postscript_display(&mut pst, &display);
 
-
         let bounds = bc.bounds();
         // pst.push(0.3, (bounds.urx - bounds.llx)*1.05, 0.0);
         pst.add_gsave();
@@ -208,12 +221,12 @@ fn main() {
         pst.add_translate(bounds.urx * 1.05, bounds.ury * 0.5);
         pst.add_scale(0.4);
 
-        display.cells = false;
-        display.color_cells = true;
+        display.display_cells = false;
         bc.postscript_display(&mut pst, &display);
         pst.add_grestore();
 
-        pst.generate(arguments.display_test.unwrap().clone()).unwrap();
+        pst.generate(arguments.display_test.unwrap().clone())
+            .unwrap();
     }
 
     if arguments.postscript.is_some() {
@@ -222,7 +235,7 @@ fn main() {
 
     if arguments.colorize.is_some() {
         let mut pst = &mut bc.postscript_prep();
-        let display = bookshelf::Display::new();
+        let display = bookshelf::PostscriptDisplay::new();
         bc.ps_color_cells(&mut pst, &display);
         pst.generate(arguments.colorize.unwrap().clone()).unwrap();
     }

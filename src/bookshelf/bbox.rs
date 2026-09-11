@@ -16,10 +16,13 @@ impl fmt::Display for Point {
 
 impl Point {
     pub fn new() -> Point {
-        Point { x: 0.0, y: 0.0, z: 0.0 }
+        Point {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        }
     }
 }
-
 
 #[derive(Copy, Clone)]
 pub struct BBox {
@@ -120,7 +123,7 @@ impl BBox {
         let mut left = *self;
         let mut right = *self;
 
-        left.urz = self.llz + dz*bias;
+        left.urz = self.llz + dz * bias;
         right.llz = left.urz;
         (left, right)
     }

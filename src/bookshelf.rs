@@ -36,10 +36,13 @@ use std::io::Write;
 use std::path::Path;
 
 use pstools::PSTool;
-// Have bbox as a module now.... 
+// Have bbox as a module now....
 pub mod bbox;
-use bbox::Point;
 use bbox::BBox;
+use bbox::Point;
+
+use serde::Deserialize;
+use serde_json;
 
 const LDBG: bool = false;
 
@@ -58,12 +61,12 @@ const LDBG: bool = false;
 // use crate::point;
 
 use pstools;
-use std::fmt;
 use scanf;
+use std::fmt;
 
 use hypergraph::hypergraph;
-use metapartition;
 use lineio::LineIO;
+use metapartition;
 
 /// PinInstances are in the vector for the cells.
 #[derive(Clone)]
@@ -281,33 +284,199 @@ pub struct BookshelfCircuit {
     /// Easy access row height
     pub row_height: f32,
     pub is_blockpacking: bool,
+    pub postscript_display: PostscriptDisplay,
 }
 
-pub struct Display {
+fn default_false() -> bool {
+    false
+}
+fn default_true() -> bool {
+    true
+}
+fn default_black() -> Vec<f32> {
+    vec![0.0, 0.0, 0.0]
+}
+
+fn default_blue() -> Vec<f32> {
+    vec![0.3, 0.3, 1.0]
+}
+
+fn default_red() -> Vec<f32> {
+    vec![1.0, 0.0, 0.0]
+}
+
+fn default_grey() -> Vec<f32> {
+    vec![0.2, 0.2, 0.2]
+}
+
+fn default_underlay() -> Vec<f32> {
+    vec![0.0, 0.0, 0.4]
+}
+
+fn default_font_size() -> f32 {
+    10.0
+}
+
+fn default_note_font_size() -> f32 {
+    12.0
+}
+
+fn default_custom() -> Option<Vec<Vec<f32>>> {
+    None
+}
+
+fn default_font() -> String {
+    "Helvetica".to_string()
+}
+
+fn default_border() -> f32 {
+    20.0
+}
+
+fn default_cell_line_weight() -> f32 {
+    0.5
+}
+
+fn default_macro_line_weight() -> f32 {
+    2.0
+}
+
+#[derive(Deserialize)]
+pub struct PostscriptDisplay {
+    #[serde(default = "default_true")]
     /// Display cells
-    pub cells: bool, 
-    /// Display colorized boxes
-    pub color_cells: bool,
+    pub display_cells: bool,
+
+    #[serde(default = "default_true")]
+    /// Display macros
+    pub display_macros: bool,
+
+    #[serde(default = "default_false")]
+    /// Fill the cells.  If selected, cells will be outlined in black    
+    pub fill_cells: bool,
+
+    #[serde(default = "default_false")]
+    /// Fill macro cells.  If selected, macros will be outlined in black
+    pub fill_macros: bool,
+
+    #[serde(default = "default_cell_line_weight")]
+    /// Cell line weight
+    pub cell_line_weight: f32,
+
+    #[serde(default = "default_macro_line_weight")]
+    /// Macro block line weight
+    pub macro_line_weight: f32,
+
+    // #[serde(default = "default_false")]
+    // /// Display colorized boxes
+    // pub color_cells: bool,
+    #[serde(default = "default_false")]
     /// Labels on cells
-    pub labels: bool,
+    pub cell_labels: bool,
+
+    #[serde(default = "default_true")]
+    /// Labels on macros
+    pub macro_labels: bool,
+
+    #[serde(default = "default_false")]
     /// Movement from prior position
     pub movement: bool,
+
+    #[serde(default = "default_true")]
     /// Display terminals
-    pub terminals: bool, 
+    pub terminals: bool,
+
+    #[serde(default = "default_true")]
     /// Display the log information
     pub notes: bool,
+
+    #[serde(default = "default_true")]
     /// Box around the placement, and the interior rows
     pub boundingbox: bool,
+
+    #[serde(default = "default_false")]
     /// Draw the rows
     pub rows: bool,
+
+    #[serde(default = "default_blue")]
+    /// Color for macro blocks
+    pub macro_color: Vec<f32>,
+
+    #[serde(default = "default_grey")]
+    /// Color for cells
+    pub cell_color: Vec<f32>,
+
+    #[serde(default = "default_font_size")]
+    /// Font size for cells and macros
+    pub font_size: f32,
+
+    #[serde(default = "default_note_font_size")]
+    /// Font size for notes
+    pub note_font_size: f32,
+
+    #[serde(default = "default_font")]
+    /// Font for text
+    pub font: String,
+
+    #[serde(default = "default_false")]
+    /// Display statistics for the design
+    pub stats: bool,
+
+    #[serde(default = "default_true")]
+    /// Underlay beneath all objects; to highlight dead space and gaps
+    pub underlay: bool,
+
+    #[serde(default = "default_underlay")]
+    /// Color for the underlay
+    pub underlay_color: Vec<f32>,
+
+    #[serde(default = "default_border")]
+    /// Border in pixels to put around the placement
+    pub border: f32,
+
+    #[serde(default = "default_custom")]
+    /// Custom colors for every placeable object
+    pub custom_color: Option<Vec<Vec<f32>>>,
 }
 
-impl Display {
-    pub fn new() -> Display {
-        Display { cells: true, color_cells: true, labels: true, movement: false, terminals: true, notes: true, boundingbox: true, rows: false }
+// use std::error::Error;
+
+impl PostscriptDisplay {
+    pub fn new() -> PostscriptDisplay {
+        PostscriptDisplay {
+            display_cells: true,
+            display_macros: true,
+            fill_cells: false,
+            fill_macros: false,
+            cell_line_weight: default_cell_line_weight(),
+            macro_line_weight: default_macro_line_weight(),
+            cell_labels: false,
+            macro_labels: true,
+            font: "Helvetica".to_string(),
+            movement: false,
+            terminals: true,
+            notes: true,
+            boundingbox: true,
+            rows: false,
+            macro_color: vec![0.2, 0.5, 0.5],
+            cell_color: vec![0.3, 0.4, 0.5],
+            font_size: 12.0,
+            note_font_size: 14.0,
+            stats: false,
+            underlay: true,
+            underlay_color: default_underlay(),
+            border: default_border(),
+            custom_color: None,
+        }
+    }
+    pub fn from_json(json_file: &String) -> Result<PostscriptDisplay, Box<dyn std::error::Error>> {
+        let f = File::open(json_file)?;
+        let reader = BufReader::new(f);
+        let disp: PostscriptDisplay = serde_json::from_reader(reader)?;
+
+        Ok(disp)
     }
 }
-
 
 /// WlCalc contains information needed for fast wire length
 /// calculations
@@ -378,6 +547,7 @@ impl BookshelfCircuit {
             num_terminals: 0,
             row_height: 0.0,
             is_blockpacking: false,
+            postscript_display: PostscriptDisplay::new(),
         };
 
         bc
@@ -385,10 +555,15 @@ impl BookshelfCircuit {
 
     pub fn add_box_deprecated(&self, pst: &mut PSTool, llx: f32, lly: f32, urx: f32, ury: f32) {
         let (scale, offset_x, offset_y) = pst.get_scale();
-        pst.add_box(offset_x + llx * scale, offset_y + lly * scale, offset_x + urx * scale, offset_y + ury * scale);
+        pst.add_box(
+            offset_x + llx * scale,
+            offset_y + lly * scale,
+            offset_x + urx * scale,
+            offset_y + ury * scale,
+        );
     }
 
-    pub fn ps_terminals(&self, pst: &mut PSTool, display: &Display) {
+    pub fn ps_terminals(&self, pst: &mut PSTool, display: &PostscriptDisplay) {
         // Terminals n the background
         pst.set_color(1.0, 0.3, 0.3, 1.0);
         for i in 0..self.cells.len() {
@@ -403,51 +578,78 @@ impl BookshelfCircuit {
             }
         }
     }
-    pub fn ps_cellnames(&self, pst: &mut PSTool, display: &Display) {
+    pub fn ps_cellnames(&self, pst: &mut PSTool, display: &PostscriptDisplay) {
         // Terminals n the background
         pst.set_color(0.0, 0.0, 0.0, 1.0);
         for i in 0..self.cells.len() {
             let x = self.cellpos[i].x + 0.4;
             let y = self.cellpos[i].y + 1.5;
             if !self.cells[i].terminal {
-                pst.add_text(x, y, self.cells[i].name.clone());
+                if (display.cell_labels && !self.cells[i].is_macro)
+                    || (display.macro_labels && self.cells[i].is_macro)
+                {
+                    pst.add_text(x, y, self.cells[i].name.clone());
+                }
             }
-        }        
+        }
     }
-    pub fn ps_cells(&self, pst: &mut PSTool, display: &Display) {
+    pub fn ps_cells(&self, pst: &mut PSTool, display: &PostscriptDisplay) {
         pst.set_color(0.4, 0.4, 1.0, 1.0);
-        let (scale, offset_x, offset_y) = pst.get_scale();
         for i in 0..self.cells.len() {
             if !self.cells[i].terminal && !self.cells[i].is_macro {
-                pst.add_box(self.cellpos[i].x + 0.25, self.cellpos[i].y + 0.25, 
-                    self.cellpos[i].x + self.cells[i].w - 0.5, 
-                    self.cellpos[i].y + self.cells[i].h - 0.5);
-                // pst.add_postscript(format!(
-                //     "{:.1} {:.1} {:.1} {:.1} box",
-                //     offset_x + scale * (self.cellpos[i].x + 0.25),
-                //     offset_y + scale * (self.cellpos[i].y + 0.25),
-                //     scale * (self.cells[i].w - 0.5),
-                //     scale * (self.cells[i].h - 0.5)
-                //));
+                pst.add_box(
+                    self.cellpos[i].x + 0.25,
+                    self.cellpos[i].y + 0.25,
+                    self.cellpos[i].x + self.cells[i].w - 0.5,
+                    self.cellpos[i].y + self.cells[i].h - 0.5,
+                );
             }
         }
         pst.set_color(0.0, 0.0, 0.0, 1.0);
         pst.set_fill_color(0.8, 0.8, 1.0, 1.0);
         for i in 0..self.cells.len() {
             if !self.cells[i].terminal && self.cells[i].is_macro {
-                pst.add_filled_box(self.cellpos[i].x + 0.25, self.cellpos[i].y + 0.25, 
-                    self.cellpos[i].x + self.cells[i].w - 0.5, 
-                    self.cellpos[i].y + self.cells[i].h - 0.5);
-                // pst.add_postscript(format!(
-                //     "{:.1} {:.1} {:.1} {:.1} box",
-                //     offset_x + scale *(self.cellpos[i].x + 0.25),
-                //     offset_y + scale * (self.cellpos[i].y + 0.25),
-                //     scale * (self.cells[i].w - 0.5),
-                //     scale * (self.cells[i].h - 0.5)
-                // ));
+                pst.add_filled_box(
+                    self.cellpos[i].x + 0.25,
+                    self.cellpos[i].y + 0.25,
+                    self.cellpos[i].x + self.cells[i].w - 0.5,
+                    self.cellpos[i].y + self.cells[i].h - 0.5,
+                );
             }
         }
     }
+
+    pub fn ps_macros(&self, pst: &mut PSTool, display: &PostscriptDisplay) {
+        pst.set_color(
+            display.macro_color[0],
+            display.macro_color[1],
+            display.macro_color[2],
+            1.0,
+        );
+        for i in 0..self.cells.len() {
+            if !self.cells[i].terminal && self.cells[i].is_macro {
+                pst.add_box(
+                    self.cellpos[i].x + 0.25,
+                    self.cellpos[i].y + 0.25,
+                    self.cellpos[i].x + self.cells[i].w - 0.5,
+                    self.cellpos[i].y + self.cells[i].h - 0.5,
+                );
+            }
+        }
+        pst.set_color(0.0, 0.0, 0.0, 1.0);
+        pst.set_fill_color(0.8, 0.8, 1.0, 1.0);
+        for i in 0..self.cells.len() {
+            if !self.cells[i].terminal && self.cells[i].is_macro {
+                pst.add_filled_box(
+                    self.cellpos[i].x + 0.25,
+                    self.cellpos[i].y + 0.25,
+                    self.cellpos[i].x + self.cells[i].w - 0.5,
+                    self.cellpos[i].y + self.cells[i].h - 0.5,
+                );
+            }
+        }
+    }
+
     fn ps_color(pst: &mut pstools::PSTool, n: u32, k: u32) {
         // let mut r = 1.0 * (((11 * n) % k) as f32).sin().abs();
         // if r < 0.3 {
@@ -467,7 +669,7 @@ impl BookshelfCircuit {
     }
     /// Generate PostScript for the cell and macro positions, using
     /// the cell color group (or cell index if that does not exist).
-    pub fn ps_color_cells(&self, pst: &mut PSTool, display: &Display) {
+    pub fn ps_color_cells(&self, pst: &mut PSTool, display: &PostscriptDisplay) {
         let (scale, offset_x, offset_y) = pst.get_scale();
 
         for i in 0..self.cells.len() {
@@ -479,8 +681,12 @@ impl BookshelfCircuit {
                 cn = i;
             }
             BookshelfCircuit::ps_color(pst, cn as u32, 32);
-            pst.add_box(self.cellpos[i].x + 0.25, self.cellpos[i].y + 0.25,
-            self.cellpos[i].x + self.cells[i].w - 0.5, self.cellpos[i].y + self.cells[i].h - 0.5);
+            pst.add_box(
+                self.cellpos[i].x + 0.25,
+                self.cellpos[i].y + 0.25,
+                self.cellpos[i].x + self.cells[i].w - 0.5,
+                self.cellpos[i].y + self.cells[i].h - 0.5,
+            );
 
             // pst.add_postscript(format!(
             //     "{:.1} {:.1} {:.1} {:.1} box",
@@ -491,20 +697,24 @@ impl BookshelfCircuit {
             // ));
         }
     }
-    pub fn ps_labels(&self, pst: &mut PSTool, display: &Display) {
+    pub fn ps_labels(&self, pst: &mut PSTool, display: &PostscriptDisplay) {
         pst.set_color(0.1, 0.1, 0.0, 1.0);
-        pst.set_font(self.row_height * 0.3, "Courier".to_string());
+        pst.set_font(display.font_size, display.font.clone());
         for i in 0..self.cells.len() {
             if !self.cells[i].terminal {
-                pst.add_text(
-                    self.cellpos[i].x + 1.0,
-                    self.cellpos[i].y + 1.0,
-                    self.cells[i].name.clone(),
-                );
+                if (self.cells[i].is_macro && display.macro_labels)
+                    || (!self.cells[i].is_macro && display.cell_labels)
+                {
+                    pst.add_text(
+                        self.cellpos[i].x + 1.0,
+                        self.cellpos[i].y + 1.0,
+                        self.cells[i].name.clone(),
+                    );
+                }
             }
         }
     }
-    pub fn ps_movement(&self, pst: &mut PSTool, display: &Display) {
+    pub fn ps_movement(&self, pst: &mut PSTool, display: &PostscriptDisplay) {
         if self.refpos.is_none() {
             return;
         }
@@ -517,7 +727,7 @@ impl BookshelfCircuit {
                 rp[i].x + 0.5,
                 rp[i].y + 0.5,
                 rp[i].x + self.cells[i].w - 1.0,
-                rp[i].y + self.cells[i].h - 1.0
+                rp[i].y + self.cells[i].h - 1.0,
             );
         }
 
@@ -536,20 +746,15 @@ impl BookshelfCircuit {
             );
             let cx = self.cellpos[i].x + dx;
             let cy = self.cellpos[i].y + dy;
-            pst.add_box(
-                cx - 1.5,
-                cy - 1.5,
-                cx + 3.0,
-                cy + 3.0
-            );
+            pst.add_box(cx - 1.5, cy - 1.5, cx + 3.0, cy + 3.0);
         }
     }
 
-    pub fn ps_stats(&self, pst: &mut PSTool, display: &Display) {
+    pub fn ps_stats(&self, pst: &mut PSTool, display: &PostscriptDisplay) {
         // Scale  the font
         let b = self.core();
         let height = 0.01 * b.dy(); // Font height is 1% of core height, should give 100 lines of text if needed
-        pst.set_font(height, "Courier".to_string());
+        pst.set_font(display.note_font_size, display.font.clone());
         pst.set_text_ln(height, b.dy() - height);
         pst.set_color(0.0, 0.0, 0.0, 1.0);
         for n in &self.notes {
@@ -570,6 +775,12 @@ impl BookshelfCircuit {
             avg_len / self.row_height
         ));
     }
+
+    /// Generates a PostScript file using the display parameters
+    /// assigned to the bookshelf circuit structure.  Creates a
+    /// PST writer, writes the file, and closes it.  To generate
+    /// multiple PostScript images, all in the same file, use the
+    /// postscript_display function.
     pub fn postscript(&self, filename: String) {
         // let mut pst = pstools::PSTool::new();
         // pst.add_postscript("/box {/h 2 1 roll def /w 2 1 roll def /oy 2 1 roll def /ox 2 1 roll def newpath ox oy moveto".to_string());
@@ -577,67 +788,54 @@ impl BookshelfCircuit {
         // pst.add_postscript("ox w add oy h add lineto".to_string());
         // pst.add_postscript("ox oy h add lineto".to_string());
         // pst.add_postscript("closepath stroke} def".to_string());
-        let mut pst = self.postscript_prep();
-        let display = Display::new();
+        // let mut pst = self.postscript_prep();
+        // let display = PostscriptDisplay::new();
+        let mut pst = pstools::PSTool::new();
+        self.postscript_display(&mut pst, &self.postscript_display);
 
-
-
-
-        self.ps_cells(&mut pst, &display);
-        self.ps_terminals(&mut pst, &display);        
+        // self.ps_cells(&mut pst, &display);
+        // self.ps_terminals(&mut pst, &display);
         // self.ps_cellnames(&mut pst, &display);
-        self.ps_stats(&mut pst, &display);
+        // self.ps_stats(&mut pst, &display);
 
-        pst.set_border(40.0);
+        // pst.set_border(40.0);
         pst.generate(filename).unwrap();
     }
 
-    pub fn postscript_prep(&self) -> PSTool {
-        let mut pst = pstools::PSTool::new();
-        // pst.add_postscript("/box {/h 2 1 roll def /w 2 1 roll def /oy 2 1 roll def /ox 2 1 roll def newpath ox oy moveto".to_string());
-        // pst.add_postscript("ox w add oy lineto".to_string());
-        // pst.add_postscript("ox w add oy h add lineto".to_string());
-        // pst.add_postscript("ox oy h add lineto".to_string());
-        // pst.add_postscript("closepath stroke} def".to_string());
+    
 
-        // Outside boundary of the entire placed stuff...  With a little bit of deadband to make
-        // sure we don't overlap a line.
-        pst.set_color(0.0, 1.0, 0.0, 1.0);
-     
+    pub fn postscript_display(&self, pst: &mut PSTool, display: &PostscriptDisplay) {
+        pst.set_border(display.border);        
+        pst.set_font(display.font_size, display.font.clone());
+        if display.underlay {
+            let bounds = self.bounds();
+            pst.set_fill_color(display.underlay_color[0], display.underlay_color[1], display.underlay_color[2], 1.0);
+            pst.add_filled_box(bounds.llx,bounds.lly, bounds.urx, bounds.ury);
+        }
 
-        pst
-    }
+        if display.display_macros {
+            self.ps_macros(pst, display);
+        }
 
-    pub fn ps_box(&self, pst: &mut PSTool) {
-        let bb = self.bounds();
-        pst.set_color(0.0, 1.0, 0.0, 1.0);
-
-        pst.add_box(bb.llx - 3.0, bb.lly - 3.0, bb.urx + 6.0, bb.ury + 6.0);
-        // Use generic PST box for the core area -- cells are using the macro, and
-        // don't alter the core bounding box.
-        pst.set_color(0.0, 0.0, 0.0, 1.0);
-        let bb = self.core();
-        pst.add_box(bb.llx, bb.lly, bb.urx, bb.ury);
-    }
-
-    pub fn bookshelf_display(&self) -> Display {
-        Display { cells: true, terminals: true, notes: true, color_cells: false, labels: false, movement: false, boundingbox: true, rows: false}
-    }
-
-    pub fn postscript_display(&self, pst: &mut PSTool, display: &Display) {
-        if display.cells {
+        if display.display_cells {
+            println!("DISPLAY CELLS");
             self.ps_cells(pst, display);
         }
-        if display.color_cells {
-            self.ps_color_cells(pst, display);
+
+        if display.macro_labels || display.cell_labels {
+            self.ps_labels(pst, display);
         }
+
+        // if display.color_cells {
+        //     self.ps_color_cells(pst, display);
+        // }
         if display.movement {
             self.ps_movement(pst, display);
         }
         if display.terminals {
             self.ps_terminals(pst, display);
         }
-        self.ps_cellnames(pst, &display);
+        // self.ps_cellnames(pst, &display);
         if display.boundingbox {
             self.ps_box(pst);
         }
@@ -683,7 +881,40 @@ impl BookshelfCircuit {
         pst.set_border(40.0);
         pst.generate(filename).unwrap();
     }
+/// postscript_prep is deprecated - the definitions and functions
+    /// that were previously generated are now part of the PSTool
+    /// crate
+    pub fn postscript_prep(&self) -> PSTool {
+        let mut pst = pstools::PSTool::new();
+        // pst.add_postscript("/box {/h 2 1 roll def /w 2 1 roll def /oy 2 1 roll def /ox 2 1 roll def newpath ox oy moveto".to_string());
+        // pst.add_postscript("ox w add oy lineto".to_string());
+        // pst.add_postscript("ox w add oy h add lineto".to_string());
+        // pst.add_postscript("ox oy h add lineto".to_string());
+        // pst.add_postscript("closepath stroke} def".to_string());
 
+        // Outside boundary of the entire placed stuff...  With a little bit of deadband to make
+        // sure we don't overlap a line.
+        pst.set_color(0.0, 1.0, 0.0, 1.0);
+
+        pst
+    }
+
+    pub fn ps_box(&self, pst: &mut PSTool) {
+        let bb = self.bounds();
+        pst.set_color(0.0, 1.0, 0.0, 1.0);
+
+        pst.add_box(bb.llx - 3.0, bb.lly - 3.0, bb.urx + 6.0, bb.ury + 6.0);
+        // Use generic PST box for the core area -- cells are using the macro, and
+        // don't alter the core bounding box.
+        pst.set_color(0.0, 0.0, 0.0, 1.0);
+        let bb = self.core();
+        pst.add_box(bb.llx, bb.lly, bb.urx, bb.ury);
+    }
+
+    pub fn bookshelf_display(&self) -> PostscriptDisplay {
+        // Display { cells: true, terminals: true, notes: true, color_cells: false, labels: false, movement: false, boundingbox: true, rows: false}
+        PostscriptDisplay::new()
+    }
     pub fn cellweights(&self, cells: &Vec<usize>) -> f32 {
         let mut total = 0.0;
         for cell_id in cells {
@@ -1144,9 +1375,11 @@ impl BookshelfCircuit {
     pub fn read_plx(&mut self, filepath: &String) -> usize {
         let mut lineio = match LineIO::new(filepath) {
             Ok(reader) => reader,
-            Err(error) => {panic!{"Failed to open a file {error}"};}
+            Err(error) => {
+                panic! {"Failed to open a file {error}"};
+            }
         };
-        
+
         loop {
             let s = match lineio.getline() {
                 Ok(str) => str,
@@ -1223,7 +1456,7 @@ impl BookshelfCircuit {
     }
 
     pub fn write_plx(&self, filepath: &String, annotate: &Vec<String>) {
-      let mut f = File::create(filepath).unwrap();
+        let mut f = File::create(filepath).unwrap();
         writeln!(&mut f, "Binghamton plx 1.0").unwrap();
 
         writeln!(&mut f, "# Generated by bookshelf_r.  HPWL {}", self.wl()).unwrap();
@@ -1257,7 +1490,7 @@ impl BookshelfCircuit {
                 )
                 .unwrap();
             }
-        }      
+        }
     }
 
     /// Writes a PL formatted placement fil, marking all macro blocks as
@@ -1682,10 +1915,8 @@ impl BookshelfCircuit {
         let mut urx = 0.0;
         let mut ury = 0.0;
         for pref in &n.pins {
-            let px =
-                pos[pref.parent_cell].x + self.cells[pref.parent_cell].pins[pref.index].dx;
-            let py =
-                pos[pref.parent_cell].y + self.cells[pref.parent_cell].pins[pref.index].dy;
+            let px = pos[pref.parent_cell].x + self.cells[pref.parent_cell].pins[pref.index].dx;
+            let py = pos[pref.parent_cell].y + self.cells[pref.parent_cell].pins[pref.index].dy;
 
             if first {
                 llx = px;
@@ -1702,7 +1933,7 @@ impl BookshelfCircuit {
         }
         let len = (urx - llx) + (ury - lly);
 
-        len        
+        len
     }
 
     pub fn wl(&self) -> f32 {
@@ -1920,6 +2151,11 @@ impl BookshelfCircuit {
 
         let mut bc = BookshelfCircuit::new();
         bc.read_blocknodes(path.with_file_name(blockf).as_path());
+        for i in 0..bc.cells.len() {
+            if !bc.cells[i].terminal {
+                bc.cells[i].is_macro = true;
+            }
+        }
         bc.read_nets(path.with_file_name(netf).as_path());
         bc.read_pl(path.with_file_name(plf).as_path(), false);
         bc.unit_x = 1.0;
@@ -1988,14 +2224,20 @@ impl BookshelfCircuit {
                             can_rotate: false,
                         };
                         self.cells.push(c);
-                        let cp = Point { x: 0.0, y: 0.0, z: 0.0 };
+                        let cp = Point {
+                            x: 0.0,
+                            y: 0.0,
+                            z: 0.0,
+                        };
                         self.cellpos.push(cp);
                         self.orient.push(Orientation::N);
                     }
-                    if let Ok((bname, area, min_aspect, max_aspect)) = scan_fmt!(&l, "{} softrectangular {} {} {}", String, f32, f32, f32) {
+                    if let Ok((bname, area, min_aspect, max_aspect)) =
+                        scan_fmt!(&l, "{} softrectangular {} {} {}", String, f32, f32, f32)
+                    {
                         let cn = self.find_cell(bname.clone());
                         let w = area.sqrt().trunc();
-                        let h = (area/w).trunc() + 1.0;  // Force integer sizing
+                        let h = (area / w).trunc() + 1.0; // Force integer sizing
                         let c = Cell {
                             name: bname,
                             w: w,
@@ -2009,10 +2251,14 @@ impl BookshelfCircuit {
                             soft: None,
                             is_macro: true,
                             is_soft: true,
-                            can_rotate: true
+                            can_rotate: true,
                         };
                         self.cells.push(c);
-                        let cp = bbox::Point{x: 0.0, y: 0.0, z: 0.0};
+                        let cp = bbox::Point {
+                            x: 0.0,
+                            y: 0.0,
+                            z: 0.0,
+                        };
                         self.cellpos.push(cp);
                         self.orient.push(Orientation::N);
                     }
@@ -2037,7 +2283,11 @@ impl BookshelfCircuit {
                             is_soft: false,
                             can_rotate: true,
                         });
-                        self.cellpos.push(Point { x: 0.0, y: 0.0, z: 0.0 });
+                        self.cellpos.push(Point {
+                            x: 0.0,
+                            y: 0.0,
+                            z: 0.0,
+                        });
                         self.orient.push(Orientation::N);
                     }
                 }
@@ -2333,8 +2583,7 @@ impl BookshelfCircuit {
 
             for cell_id in &cell_ids {
                 if params.cellmark.marked[*cell_id] {
-                    hg.eptr
-                        .push(params.cellmark.index[*cell_id] as c_uint);
+                    hg.eptr.push(params.cellmark.index[*cell_id] as c_uint);
                     card = card + 1;
                 }
             }
