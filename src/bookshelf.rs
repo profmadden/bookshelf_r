@@ -1758,12 +1758,16 @@ impl BookshelfCircuit {
         for r in &self.rows {
             tot_row_area = tot_row_area + r.bounds.area();
         }
+        let b = self.circuit_bounds();
+
         println!(
-            "{} pads.\nTotal cell area: {}\nTotal row area: {}\nUtilization: {}",
+            "{} pads.\nTotal circuit area: {}\nTotal row area: {}\nBBox bounds {}\nRow Utilization: {}\nBBox Utilization {:8.6}",
             tot_pads,
             tot_area,
             tot_row_area,
-            tot_area / tot_row_area
+            b,
+            tot_area / tot_row_area,
+            tot_area / b.area(),
         );
         println!("Wire length: {}", self.wl());
         println!(
@@ -2032,6 +2036,19 @@ impl BookshelfCircuit {
             result.addpoint(cp.x + cell.w, cp.y + cell.h);
         }
         result
+    }
+    pub fn circuit_bounds(&self) -> BBox {
+       let mut result = self.core(); // Get the bounds of the placement area
+        for c in 0..self.cells.len() {
+            if self.cells[c].terminal {
+                continue;
+            }
+            let cp = &self.cellpos[c];
+            let cell = &self.cells[c];
+            result.addpoint(cp.x, cp.y);
+            result.addpoint(cp.x + cell.w, cp.y + cell.h);
+        }
+        result        
     }
     pub fn mincore(&self) -> BBox {
         let mut core = self.core();
