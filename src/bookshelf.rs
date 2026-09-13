@@ -200,6 +200,8 @@ pub struct Cell {
     pub is_macro: bool,
     pub is_soft: bool,
     pub can_rotate: bool,
+    /// Used to mark cells for display as needed
+    pub tag: usize,
 }
 
 impl Cell {
@@ -1145,6 +1147,7 @@ impl BookshelfCircuit {
                     is_macro: false,
                     is_soft: false,
                     can_rotate: false,
+                    tag: 0,
                 };
 
                 self.cells.push(c);
@@ -2314,6 +2317,7 @@ impl BookshelfCircuit {
                             is_macro: false,
                             is_soft: false,
                             can_rotate: false,
+                            tag: 0,
                         };
                         self.cells.push(c);
                         let cp = Point {
@@ -2344,6 +2348,7 @@ impl BookshelfCircuit {
                             is_macro: true,
                             is_soft: true,
                             can_rotate: true,
+                            tag: 0,
                         };
                         self.cells.push(c);
                         let cp = bbox::Point {
@@ -2374,6 +2379,7 @@ impl BookshelfCircuit {
                             is_macro: false,
                             is_soft: false,
                             can_rotate: true,
+                            tag: 0,
                         });
                         self.cellpos.push(Point {
                             x: 0.0,

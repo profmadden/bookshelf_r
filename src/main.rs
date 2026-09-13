@@ -319,6 +319,7 @@ pub fn flipdemo() {
         is_macro: false,
         is_soft: false,
         can_rotate: true,
+        tag: 0,
     };
     c.pins.push(PinInstance {
         name: "a".to_string(),
