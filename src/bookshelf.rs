@@ -623,10 +623,10 @@ impl BookshelfCircuit {
 
     pub fn ps_macros(&self, pst: &mut PSTool, display: &PostscriptDisplay) {
         // Black outlines if we're coloring macro blocks
-        if display.color_tag {
-            pst.set_color(0.0, 0.0, 0.0, 1.0);
-        } else {
-            pst.set_color(
+        pst.set_color(0.0, 0.0, 0.0, 1.0);
+        pst.set_line_width(display.macro_line_weight);
+        if !display.color_tag {
+            pst.set_fill_color(
                 display.macro_color[0],
                 display.macro_color[1],
                 display.macro_color[2],
@@ -824,7 +824,6 @@ impl BookshelfCircuit {
         }
 
         if display.display_cells {
-            println!("DISPLAY CELLS");
             self.ps_cells(pst, display);
         }
 
