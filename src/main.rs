@@ -11,7 +11,7 @@ use bookshelf_r::bookshelf::{HyperParams, PostscriptDisplay};
 use bookshelf_r::bookshelf::{PinDetail, PinInstance};
 use metapartition;
 
-use chrono::{Utc};
+use chrono::Utc;
 use hostname;
 use std::env;
 
@@ -141,7 +141,7 @@ fn main() {
     bc.postscript_display = display_config;
     bc.notes.push(Utc::now().to_string());
     bc.notes
-            .push(format!("Host: {:?}", hostname::get().unwrap()));
+        .push(format!("Host: {:?}", hostname::get().unwrap()));
     let version = option_env!("BOOKSHELFGIT_HASH").unwrap_or(&"no hash");
     bc.notes.push(format!("Bookshelf git rev: {}", version));
     let args: Vec<String> = env::args().collect();
@@ -150,7 +150,6 @@ fn main() {
         cmdline = cmdline + " " + v;
     }
     bc.notes.push(cmdline);
-    
 
     if arguments.plxfile.is_some() {
         bc.read_plx(&arguments.plxfile.unwrap());
@@ -262,7 +261,20 @@ fn main() {
         bc.write_aux(&arguments.export.unwrap());
     }
 
-    let (num_macro, num_cell, num_terminal, hpwl, total_area, macro_area, cell_area, row_area, util_row, bbox, util_box, deadspace) = bc.statistics(false);
+    let (
+        num_macro,
+        num_cell,
+        num_terminal,
+        hpwl,
+        total_area,
+        macro_area,
+        cell_area,
+        row_area,
+        util_row,
+        bbox,
+        util_box,
+        deadspace,
+    ) = bc.statistics(false);
     println!("Number of macros:    {num_macro}");
     println!("Number of cells:     {num_cell}");
     println!("Number of terminals: {num_terminal}");
@@ -275,7 +287,6 @@ fn main() {
     println!("Bounding box of ckt: {bbox}");
     println!("BBox utilization:    {util_box}");
     println!("Deadspace:           {deadspace}");
-
 }
 
 use bookshelf_r::bookshelf::Cell;

@@ -601,79 +601,64 @@ impl BookshelfCircuit {
         }
     }
     pub fn ps_cells(&self, pst: &mut PSTool, display: &PostscriptDisplay) {
-        pst.set_color(0.4, 0.4, 1.0, 1.0);
+        pst.set_color(
+            display.cell_color[0],
+            display.cell_color[1],
+            display.cell_color[2],
+            1.0,
+        );
+        // pst.set_color(0.4, 0.4, 1.0, 1.0);
         for i in 0..self.cells.len() {
-            if !self.cells[i].terminal && !self.cells[i].is_macro {
-                pst.add_box(
-                    self.cellpos[i].x + 0.25,
-                    self.cellpos[i].y + 0.25,
-                    self.cellpos[i].x + self.cells[i].w - 0.5,
-                    self.cellpos[i].y + self.cells[i].h - 0.5,
-                );
+            if self.cells[i].terminal || self.cells[i].is_macro {
+                continue;
             }
-        }
-        pst.set_color(0.0, 0.0, 0.0, 1.0);
-        pst.set_fill_color(0.8, 0.8, 1.0, 1.0);
-        for i in 0..self.cells.len() {
-            if !self.cells[i].terminal && self.cells[i].is_macro {
-                pst.add_filled_box(
-                    self.cellpos[i].x + 0.25,
-                    self.cellpos[i].y + 0.25,
-                    self.cellpos[i].x + self.cells[i].w - 0.5,
-                    self.cellpos[i].y + self.cells[i].h - 0.5,
-                );
-            }
+            pst.add_box(
+                self.cellpos[i].x + 0.25,
+                self.cellpos[i].y + 0.25,
+                self.cellpos[i].x + self.cells[i].w - 0.5,
+                self.cellpos[i].y + self.cells[i].h - 0.5,
+            );
         }
     }
 
     pub fn ps_macros(&self, pst: &mut PSTool, display: &PostscriptDisplay) {
-        pst.set_color(
-            display.macro_color[0],
-            display.macro_color[1],
-            display.macro_color[2],
-            1.0,
-        );
-        for i in 0..self.cells.len() {
-            if !self.cells[i].terminal && self.cells[i].is_macro {
-                pst.add_box(
-                    self.cellpos[i].x + 0.25,
-                    self.cellpos[i].y + 0.25,
-                    self.cellpos[i].x + self.cells[i].w - 0.5,
-                    self.cellpos[i].y + self.cells[i].h - 0.5,
-                );
-            }
+        // Black outlines if we're coloring macro blocks
+        if display.color_tag {
+            pst.set_color(0.0, 0.0, 0.0, 1.0);
+        } else {
+            pst.set_color(
+                display.macro_color[0],
+                display.macro_color[1],
+                display.macro_color[2],
+                1.0,
+            );
         }
-        pst.set_color(0.0, 0.0, 0.0, 1.0);
-        pst.set_fill_color(0.8, 0.8, 1.0, 1.0);
         for i in 0..self.cells.len() {
-            if !self.cells[i].terminal && self.cells[i].is_macro {
-                if display.color_tag {
-                    let (r, g, b) = pstools::PSTool::gen_color(self.cells[i].tag as i32);
-                    pst.set_fill_color(r, g, b, 1.0);
-                }
-                pst.add_filled_box(
-                    self.cellpos[i].x + 0.25,
-                    self.cellpos[i].y + 0.25,
-                    self.cellpos[i].x + self.cells[i].w - 0.5,
-                    self.cellpos[i].y + self.cells[i].h - 0.5,
-                );
+            if self.cells[i].terminal || !self.cells[i].is_macro {
+                continue;
             }
+
+            if display.color_tag {
+                let (r, g, b) = pstools::PSTool::gen_color(self.cells[i].tag as i32);
+                pst.set_fill_color(r, g, b, 1.0);
+            }
+
+            pst.add_filled_box(
+                self.cellpos[i].x + 0.25,
+                self.cellpos[i].y + 0.25,
+                self.cellpos[i].x + self.cells[i].w - 0.5,
+                self.cellpos[i].y + self.cells[i].h - 0.5,
+            );
+            pst.add_box(
+                self.cellpos[i].x + 0.25,
+                self.cellpos[i].y + 0.25,
+                self.cellpos[i].x + self.cells[i].w - 0.5,
+                self.cellpos[i].y + self.cells[i].h - 0.5,
+            );
         }
     }
 
-    fn ps_color(pst: &mut pstools::PSTool, n: u32, k: u32) {
-        // let mut r = 1.0 * (((11 * n) % k) as f32).sin().abs();
-        // if r < 0.3 {
-        //     r = r + 0.2;
-        // }
-        // let mut g = 1.0 - ((7 * n) as f32).cos().abs();
-        // if g < 0.5 {
-        //     g = g + 0.1;
-        // }
-        // let mut b = (r * g * 12.3).sin().abs();
-        // if b < 0.2 {
-        //     b = b + 0.1;
-        // }
+    pub fn ps_color(&self, pst: &mut pstools::PSTool, n: usize) {
         let (r, g, b) = PSTool::gen_color(n as i32);
 
         pst.set_color(r, g, b, 1.0);
@@ -691,7 +676,7 @@ impl BookshelfCircuit {
             } else {
                 cn = i;
             }
-            BookshelfCircuit::ps_color(pst, cn as u32, 32);
+            self.ps_color(pst, cn as usize);
             pst.add_box(
                 self.cellpos[i].x + 0.25,
                 self.cellpos[i].y + 0.25,
@@ -813,8 +798,6 @@ impl BookshelfCircuit {
         pst.generate(filename).unwrap();
     }
 
-    
-
     pub fn postscript_display(&self, pst: &mut PSTool, display: &PostscriptDisplay) {
         // Save the notes in the comments
         let version = option_env!("BOOKSHELFGIT_HASH").unwrap_or(&"no hash");
@@ -823,12 +806,17 @@ impl BookshelfCircuit {
         for n in &self.notes {
             pst.add_comment(n.clone());
         }
-        pst.set_border(display.border);        
+        pst.set_border(display.border);
         pst.set_font(display.font_size, display.font.clone());
         if display.underlay {
             let bounds = self.bounds();
-            pst.set_fill_color(display.underlay_color[0], display.underlay_color[1], display.underlay_color[2], 1.0);
-            pst.add_filled_box(bounds.llx,bounds.lly, bounds.urx, bounds.ury);
+            pst.set_fill_color(
+                display.underlay_color[0],
+                display.underlay_color[1],
+                display.underlay_color[2],
+                1.0,
+            );
+            pst.add_filled_box(bounds.llx, bounds.lly, bounds.urx, bounds.ury);
         }
 
         if display.display_macros {
@@ -913,9 +901,25 @@ impl BookshelfCircuit {
     /// * Bounding box of logic elements
     /// * Utilization versus logic element bounding box
     /// * Deadspace of element bounding box (1.0 - above)
-    /// 
+    ///
     /// let (num_macro, num_cell, num_terminal, hpwl, total_area, macro_area, cell_area, row_area, util_row, bbox, util_box, deadspace) = bc.statistics();
-    pub fn statistics(&self, print: bool) -> (usize, usize, usize, f32, f32, f32, f32, f32, f32, BBox, f32, f32) {
+    pub fn statistics(
+        &self,
+        print: bool,
+    ) -> (
+        usize,
+        usize,
+        usize,
+        f32,
+        f32,
+        f32,
+        f32,
+        f32,
+        f32,
+        BBox,
+        f32,
+        f32,
+    ) {
         let mut num_terminal = 0;
         let mut num_macro = 0;
         let mut num_cell = 0;
@@ -944,27 +948,39 @@ impl BookshelfCircuit {
 
         let util_row = total_area / row_area;
         let bbox = self.circuit_bounds();
-        let util_box = total_area/bbox.area();
+        let util_box = total_area / bbox.area();
         let deadspace = 1.0 - util_box;
         let hpwl = self.wl();
 
         if print {
             println!("Number of macros:    {num_macro}");
-    println!("Number of cells:     {num_cell}");
-    println!("Number of terminals: {num_terminal}");
-    println!("HPWL:                {hpwl}");
-    println!("Area of circuit:     {total_area}");
-    println!("Area of macros:      {macro_area}");
-    println!("Area of cells:       {cell_area}");
-    println!("Row area:            {row_area}");
-    println!("Row utilization:     {util_row}");
-    println!("Bounding box of ckt: {bbox}");
-    println!("BBox utilization:    {util_box}");
-    println!("Deadspace:           {deadspace}");
+            println!("Number of cells:     {num_cell}");
+            println!("Number of terminals: {num_terminal}");
+            println!("HPWL:                {hpwl}");
+            println!("Area of circuit:     {total_area}");
+            println!("Area of macros:      {macro_area}");
+            println!("Area of cells:       {cell_area}");
+            println!("Row area:            {row_area}");
+            println!("Row utilization:     {util_row}");
+            println!("Bounding box of ckt: {bbox}");
+            println!("BBox utilization:    {util_box}");
+            println!("Deadspace:           {deadspace}");
         }
 
-        (num_macro, num_cell, num_terminal, hpwl, total_area, macro_area, cell_area, row_area, util_row, bbox, util_box, deadspace)
-        
+        (
+            num_macro,
+            num_cell,
+            num_terminal,
+            hpwl,
+            total_area,
+            macro_area,
+            cell_area,
+            row_area,
+            util_row,
+            bbox,
+            util_box,
+            deadspace,
+        )
     }
 
     /// postscript_prep is deprecated - the definitions and functions
@@ -2121,7 +2137,7 @@ impl BookshelfCircuit {
         result
     }
     pub fn circuit_bounds(&self) -> BBox {
-       let mut result = self.core(); // Get the bounds of the placement area
+        let mut result = self.core(); // Get the bounds of the placement area
         for c in 0..self.cells.len() {
             if self.cells[c].terminal {
                 continue;
@@ -2131,7 +2147,7 @@ impl BookshelfCircuit {
             result.addpoint(cp.x, cp.y);
             result.addpoint(cp.x + cell.w, cp.y + cell.h);
         }
-        result        
+        result
     }
     pub fn mincore(&self) -> BBox {
         let mut core = self.core();
