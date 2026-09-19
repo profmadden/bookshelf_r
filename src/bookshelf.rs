@@ -436,6 +436,10 @@ pub struct PostscriptDisplay {
     /// Border in pixels to put around the placement
     pub border: f32,
 
+    #[serde(default = "default_false")]
+    /// Color based on cell tags
+    pub color_tag: bool,
+
     #[serde(default = "default_custom")]
     /// Custom colors for every placeable object
     pub custom_color: Option<Vec<Vec<f32>>>,
@@ -468,6 +472,7 @@ impl PostscriptDisplay {
             underlay: true,
             underlay_color: default_underlay(),
             border: default_border(),
+            color_tag: false,
             custom_color: None,
         }
     }
@@ -642,6 +647,10 @@ impl BookshelfCircuit {
         pst.set_fill_color(0.8, 0.8, 1.0, 1.0);
         for i in 0..self.cells.len() {
             if !self.cells[i].terminal && self.cells[i].is_macro {
+                if display.color_tag {
+                    let (r, g, b) = pstools::PSTool::gen_color(self.cells[i].tag as i32);
+                    pst.set_fill_color(r, g, b, 1.0);
+                }
                 pst.add_filled_box(
                     self.cellpos[i].x + 0.25,
                     self.cellpos[i].y + 0.25,
