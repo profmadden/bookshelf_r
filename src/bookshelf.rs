@@ -1546,9 +1546,9 @@ impl BookshelfCircuit {
                 Err(_error) => break,
             };
             // println!("PLX {s}");
-            let parsed = sscanf::sscanf!(s, "{str} {f32} {f32} {f32} {f32} : {str}");
+            let parsed = sscanf::sscanf!(s, "{str} {f32} {f32} {f32} {f32} {f32} {f32} : {str}");
             if parsed.is_ok() {
-                let (name, x, y, w, h, orient) = parsed.unwrap();
+                let (name, x, y, z, w, h, dz, orient) = parsed.unwrap();
                 // println!("PLX {} at {} {}", name, x, y);
                 let n = name.trim().to_string();
                 let idx = self.cell_index(&n);
@@ -1557,6 +1557,7 @@ impl BookshelfCircuit {
                     let ci = idx.unwrap();
                     self.cellpos[ci].x = x;
                     self.cellpos[ci].y = y;
+                    self.cellpos[ci].z = z;
                     self.cells[ci].w = w;
                     self.cells[ci].h = h;
                     self.centerpin(ci);
@@ -1638,15 +1639,15 @@ impl BookshelfCircuit {
             if !c.terminal {
                 writeln!(
                     &mut f,
-                    "{}  {} {} {} {} : {}",
-                    c.name, self.cellpos[i].x, self.cellpos[i].y, c.w, c.h, self.orient[i]
+                    "{}  {} {} {} {} {} {} : {}",
+                    c.name, self.cellpos[i].x, self.cellpos[i].y, self.cellpos[i].z, c.w, c.h, 1.0, self.orient[i]
                 )
                 .unwrap();
             } else {
                 writeln!(
                     &mut f,
-                    "{}  {} {} {} {} : {} /FIXED",
-                    c.name, self.cellpos[i].x, self.cellpos[i].y, c.w, c.h, self.orient[i]
+                    "{}  {} {} {} {} {} {} : {} /FIXED",
+                    c.name, self.cellpos[i].x, self.cellpos[i].y, 0.0, c.w, c.h, 1.0, self.orient[i]
                 )
                 .unwrap();
             }
