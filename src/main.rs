@@ -139,6 +139,7 @@ fn main() {
         bc.summarize();
     }
     bc.postscript_display = display_config;
+
     bc.notes.push(Utc::now().to_string());
     bc.notes
         .push(format!("Host: {:?}", hostname::get().unwrap()));
@@ -163,7 +164,7 @@ fn main() {
 
         let hg = bc.build_graph(&cells, &mut params);
         let mp = Metapartitioner::new();
-        let (left, right, cut) = mp.hg_partition(&hg);
+        let (_left, _right, cut) = mp.hg_partition(&hg);
         println!("Cut {cut}");
     }
     if arguments.cell.is_some() {
@@ -245,6 +246,16 @@ fn main() {
     }
 
     if arguments.postscript.is_some() {
+        if bc.postscript_display.display_layer.is_some() {
+            println!("Moving macros and terminals to the second layer");
+            // If we have a layer number set, move all the macros and pads to layer 1.
+            for i in 0..bc.cells.len() {
+                if bc.cells[i].terminal || bc.cells[i].is_macro {
+                    bc.cellpos[i].z = 1.0;
+                }
+            }
+        }
+        bc.layers = 2;
         bc.postscript(arguments.postscript.unwrap());
     }
 
@@ -327,6 +338,7 @@ pub fn flipdemo() {
         pins: Vec::new(),
         terminal: false,
         soft: None,
+        fixed_location: None,
         is_macro: false,
         is_soft: false,
         can_rotate: true,

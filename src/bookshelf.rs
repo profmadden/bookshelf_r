@@ -197,6 +197,7 @@ pub struct Cell {
     pub pins: Vec<PinInstance>,
     pub terminal: bool,
     pub soft: Option<SoftSize>,
+    pub fixed_location: Option<Point>,
     pub is_macro: bool,
     pub is_soft: bool,
     pub can_rotate: bool,
@@ -287,6 +288,7 @@ pub struct BookshelfCircuit {
     pub row_height: f32,
     pub is_blockpacking: bool,
     pub postscript_display: PostscriptDisplay,
+    pub layers: usize,
 }
 
 fn default_false() -> bool {
@@ -343,7 +345,11 @@ fn default_macro_line_weight() -> f32 {
     2.0
 }
 
-#[derive(Deserialize)]
+fn default_none() -> Option<usize> {
+    None
+}
+
+#[derive(Deserialize,Clone)]
 pub struct PostscriptDisplay {
     #[serde(default = "default_true")]
     /// Display cells
@@ -443,6 +449,10 @@ pub struct PostscriptDisplay {
     #[serde(default = "default_custom")]
     /// Custom colors for every placeable object
     pub custom_color: Option<Vec<Vec<f32>>>,
+
+    #[serde(default = "default_none")]
+    /// Layer to display, or all if not set
+    pub display_layer: Option<usize>,
 }
 
 // use std::error::Error;
@@ -474,6 +484,7 @@ impl PostscriptDisplay {
             border: default_border(),
             color_tag: false,
             custom_color: None,
+            display_layer: None,
         }
     }
     pub fn from_json(json_file: &String) -> Result<PostscriptDisplay, Box<dyn std::error::Error>> {
@@ -555,6 +566,7 @@ impl BookshelfCircuit {
             row_height: 0.0,
             is_blockpacking: false,
             postscript_display: PostscriptDisplay::new(),
+            layers: 1,
         };
 
         bc
@@ -574,6 +586,10 @@ impl BookshelfCircuit {
         // Terminals n the background
         pst.set_color(1.0, 0.3, 0.3, 1.0);
         for i in 0..self.cells.len() {
+            if display.display_layer != None && self.cellpos[i].z as usize != display.display_layer.unwrap() {
+                continue;
+            }
+            
             if self.cells[i].terminal {
                 // pst.add_text(self.cellpos[i].x, self.cellpos[i].y, self.cells[i].name.clone());
                 pst.add_box(
@@ -589,6 +605,10 @@ impl BookshelfCircuit {
         // Terminals n the background
         pst.set_color(0.0, 0.0, 0.0, 1.0);
         for i in 0..self.cells.len() {
+            if display.display_layer != None && self.cellpos[i].z as usize != display.display_layer.unwrap() {
+                continue;
+            }
+            
             let x = self.cellpos[i].x + 0.4;
             let y = self.cellpos[i].y + 1.5;
             if !self.cells[i].terminal {
@@ -612,6 +632,10 @@ impl BookshelfCircuit {
             if self.cells[i].terminal || self.cells[i].is_macro {
                 continue;
             }
+            if display.display_layer != None && self.cellpos[i].z as usize != display.display_layer.unwrap() {
+                continue;
+            }
+            
             pst.add_box(
                 self.cellpos[i].x + 0.25,
                 self.cellpos[i].y + 0.25,
@@ -637,7 +661,10 @@ impl BookshelfCircuit {
             if self.cells[i].terminal || !self.cells[i].is_macro {
                 continue;
             }
-
+            if display.display_layer != None && self.cellpos[i].z as usize != display.display_layer.unwrap() {
+                continue;
+            }
+            
             if display.color_tag {
                 let (r, g, b) = pstools::PSTool::gen_color(self.cells[i].tag as i32);
                 pst.set_fill_color(r, g, b, 1.0);
@@ -669,6 +696,10 @@ impl BookshelfCircuit {
         let (scale, offset_x, offset_y) = pst.get_scale();
 
         for i in 0..self.cells.len() {
+            if display.display_layer != None && self.cellpos[i].z as usize != display.display_layer.unwrap() {
+                continue;
+            }
+
             let cn;
             if self.cell_color.is_some() {
                 let color = self.cell_color.as_deref().unwrap();
@@ -697,6 +728,10 @@ impl BookshelfCircuit {
         pst.set_color(0.1, 0.1, 0.0, 1.0);
         pst.set_font(display.font_size, display.font.clone());
         for i in 0..self.cells.len() {
+            if display.display_layer != None && self.cellpos[i].z as usize != display.display_layer.unwrap() {
+                continue;
+            }
+            
             if !self.cells[i].terminal {
                 if (self.cells[i].is_macro && display.macro_labels)
                     || (!self.cells[i].is_macro && display.cell_labels)
@@ -730,6 +765,10 @@ impl BookshelfCircuit {
         pst.set_color(1.0, 0.0, 0.0, 1.0);
 
         for i in 0..self.cells.len() {
+            if display.display_layer != None && self.cellpos[i].z as usize != display.display_layer.unwrap() {
+                continue;
+            }
+            
             // let rp: Option<pstools::point::Point> = self.refpos.as_ref()[i];
             let c = &self.cells[i];
             let dx = c.w * 0.5;
@@ -798,7 +837,7 @@ impl BookshelfCircuit {
         pst.generate(filename).unwrap();
     }
 
-    pub fn postscript_display(&self, pst: &mut PSTool, display: &PostscriptDisplay) {
+    pub fn postscript_display_layer(&self, pst: &mut PSTool, display: &PostscriptDisplay) {
         // Save the notes in the comments
         let version = option_env!("BOOKSHELFGIT_HASH").unwrap_or(&"no hash");
         pst.add_comment(format!("Bookshelf git rev: {}", version));
@@ -846,6 +885,24 @@ impl BookshelfCircuit {
         }
         if display.notes {
             self.ps_stats(pst, display);
+        }
+    }
+
+    pub fn postscript_display(&self, pst: &mut PSTool, display: &PostscriptDisplay) {
+        if self.layers != 1 {
+            let display_size = self.bounds();
+            let mut disp = display.clone();
+            for i in 0..self.layers {
+                pst.add_comment(format!("Generating layer {i}"));
+                println!("Display layer {i}");
+                disp.display_layer = Some(i);
+                self.postscript_display_layer(pst, &disp);
+                pst.add_comment(format!("Translate {} {}", display_size.dx(), 0.0));
+                pst.add_translate(display_size.dx() * 1.05, 0.0);                
+            }
+
+        } else {
+            self.postscript_display_layer(pst, display);
         }
     }
 
@@ -1168,6 +1225,7 @@ impl BookshelfCircuit {
                     pins: Vec::new(),
                     terminal: isterminal,
                     soft: None,
+                    fixed_location: None,
                     is_macro: false,
                     is_soft: false,
                     can_rotate: false,
@@ -2338,6 +2396,7 @@ impl BookshelfCircuit {
                             pins: Vec::new(),
                             terminal: false,
                             soft: None,
+                            fixed_location: None,
                             is_macro: false,
                             is_soft: false,
                             can_rotate: false,
@@ -2369,6 +2428,7 @@ impl BookshelfCircuit {
                             pins: Vec::new(),
                             terminal: false,
                             soft: None,
+                            fixed_location: None,
                             is_macro: true,
                             is_soft: true,
                             can_rotate: true,
@@ -2400,6 +2460,7 @@ impl BookshelfCircuit {
                             pins: Vec::new(),
                             terminal: true,
                             soft: None,
+                            fixed_location: None,
                             is_macro: false,
                             is_soft: false,
                             can_rotate: true,
