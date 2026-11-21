@@ -2483,6 +2483,15 @@ impl BookshelfCircuit {
     }
 
     pub fn orient_cell(cell: &mut Cell, orient: Orientation) {
+        // First -- put the cell into it's "unmodified" configuration
+        cell.h = cell.original_h;
+        cell.w = cell.original_w;
+        for pin in &mut cell.pins {
+            pin.dx = cell.w - pin.details[0].dx;
+            pin.dy = cell.h - pin.details[0].dy;
+        }
+
+
         if orient == Orientation::FN
             || orient == Orientation::S
             || orient == Orientation::E
