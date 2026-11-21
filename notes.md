@@ -72,3 +72,15 @@ Should be OK.
 Pushing, and this might clear up the errors generated
 in fsdc_r for the IBM HB+.
 
+### 20261121
+
+Cleaning up the pin DX/DY stuff, with block rotation.
+May have pin locations misaligned for old ICCAD04
+benchmarks (there was a change from DXDY being origin,
+versus center of cell or block).  Looks better now.
+
+Adding in function to display a net.
+---
+Now have some good display routines.  Can show macro
+and pad pins, displaying a net will label each of the
+pins, along with the net HPWL.

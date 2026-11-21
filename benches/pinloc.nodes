@@ -1,0 +1,6 @@
+UCLA nodes 1.0
+# Pin location testing
+NumNodes : 1
+NumTerminals : 0
+	     macro 100 200
+	     

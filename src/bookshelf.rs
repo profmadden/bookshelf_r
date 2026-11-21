@@ -349,15 +349,27 @@ fn default_none() -> Option<usize> {
     None
 }
 
-#[derive(Deserialize,Clone)]
+fn default_nets() -> Option<Vec<String>> {
+    None
+}
+
+#[derive(Deserialize, Clone)]
 pub struct PostscriptDisplay {
     #[serde(default = "default_true")]
     /// Display cells
     pub display_cells: bool,
 
+    #[serde(default = "default_false")]
+    /// Display cell pins
+    pub display_cell_pins: bool,
+
     #[serde(default = "default_true")]
     /// Display macros
     pub display_macros: bool,
+
+    #[serde(default = "default_false")]
+    /// Display macro pins
+    pub display_macro_pins: bool,
 
     #[serde(default = "default_false")]
     /// Fill the cells.  If selected, cells will be outlined in black    
@@ -453,6 +465,10 @@ pub struct PostscriptDisplay {
     #[serde(default = "default_none")]
     /// Layer to display, or all if not set
     pub display_layer: Option<usize>,
+
+    #[serde(default = "default_nets")]
+    /// Nets to display
+    pub display_nets: Option<Vec<String>>,
 }
 
 // use std::error::Error;
@@ -461,7 +477,9 @@ impl PostscriptDisplay {
     pub fn new() -> PostscriptDisplay {
         PostscriptDisplay {
             display_cells: true,
+            display_cell_pins: false,
             display_macros: true,
+            display_macro_pins: false,
             fill_cells: false,
             fill_macros: false,
             cell_line_weight: default_cell_line_weight(),
@@ -485,6 +503,7 @@ impl PostscriptDisplay {
             color_tag: false,
             custom_color: None,
             display_layer: None,
+            display_nets: None,
         }
     }
     pub fn from_json(json_file: &String) -> Result<PostscriptDisplay, Box<dyn std::error::Error>> {
@@ -586,10 +605,12 @@ impl BookshelfCircuit {
         // Terminals n the background
         pst.set_color(1.0, 0.3, 0.3, 1.0);
         for i in 0..self.cells.len() {
-            if display.display_layer != None && self.cellpos[i].z as usize != display.display_layer.unwrap() {
+            if display.display_layer != None
+                && self.cellpos[i].z as usize != display.display_layer.unwrap()
+            {
                 continue;
             }
-            
+
             if self.cells[i].terminal {
                 // pst.add_text(self.cellpos[i].x, self.cellpos[i].y, self.cells[i].name.clone());
                 pst.add_box(
@@ -605,10 +626,12 @@ impl BookshelfCircuit {
         // Terminals n the background
         pst.set_color(0.0, 0.0, 0.0, 1.0);
         for i in 0..self.cells.len() {
-            if display.display_layer != None && self.cellpos[i].z as usize != display.display_layer.unwrap() {
+            if display.display_layer != None
+                && self.cellpos[i].z as usize != display.display_layer.unwrap()
+            {
                 continue;
             }
-            
+
             let x = self.cellpos[i].x + 0.4;
             let y = self.cellpos[i].y + 1.5;
             if !self.cells[i].terminal {
@@ -619,6 +642,16 @@ impl BookshelfCircuit {
                 }
             }
         }
+    }
+    pub fn ps_display_pins(&self, i: usize, pst: &mut PSTool, display: &PostscriptDisplay) {
+        pst.add_gsave();
+        pst.set_color(1.0, 0.0, 0.0, 1.0);
+        for pin in &self.cells[i].pins {
+            let x = self.cellpos[i].x + pin.dx;
+            let y = self.cellpos[i].y + pin.dy;
+            pst.add_box(x - 0.5, y - 0.5, x + 1.0, y + 1.0);
+        }
+        pst.add_grestore();
     }
     pub fn ps_cells(&self, pst: &mut PSTool, display: &PostscriptDisplay) {
         pst.set_color(
@@ -632,16 +665,21 @@ impl BookshelfCircuit {
             if self.cells[i].terminal || self.cells[i].is_macro {
                 continue;
             }
-            if display.display_layer != None && self.cellpos[i].z as usize != display.display_layer.unwrap() {
+            if display.display_layer != None
+                && self.cellpos[i].z as usize != display.display_layer.unwrap()
+            {
                 continue;
             }
-            
+
             pst.add_box(
                 self.cellpos[i].x + 0.25,
                 self.cellpos[i].y + 0.25,
                 self.cellpos[i].x + self.cells[i].w - 0.5,
                 self.cellpos[i].y + self.cells[i].h - 0.5,
             );
+            if display.display_cell_pins {
+                self.ps_display_pins(i, pst, display);
+            }
         }
     }
 
@@ -661,10 +699,12 @@ impl BookshelfCircuit {
             if self.cells[i].terminal || !self.cells[i].is_macro {
                 continue;
             }
-            if display.display_layer != None && self.cellpos[i].z as usize != display.display_layer.unwrap() {
+            if display.display_layer != None
+                && self.cellpos[i].z as usize != display.display_layer.unwrap()
+            {
                 continue;
             }
-            
+
             if display.color_tag {
                 let (r, g, b) = pstools::PSTool::gen_color(self.cells[i].tag as i32);
                 pst.set_fill_color(r, g, b, 1.0);
@@ -682,6 +722,9 @@ impl BookshelfCircuit {
                 self.cellpos[i].x + self.cells[i].w - 0.5,
                 self.cellpos[i].y + self.cells[i].h - 0.5,
             );
+            if display.display_macro_pins {
+                self.ps_display_pins(i, pst, display);
+            }
         }
     }
 
@@ -696,7 +739,9 @@ impl BookshelfCircuit {
         let (scale, offset_x, offset_y) = pst.get_scale();
 
         for i in 0..self.cells.len() {
-            if display.display_layer != None && self.cellpos[i].z as usize != display.display_layer.unwrap() {
+            if display.display_layer != None
+                && self.cellpos[i].z as usize != display.display_layer.unwrap()
+            {
                 continue;
             }
 
@@ -728,10 +773,12 @@ impl BookshelfCircuit {
         pst.set_color(0.1, 0.1, 0.0, 1.0);
         pst.set_font(display.font_size, display.font.clone());
         for i in 0..self.cells.len() {
-            if display.display_layer != None && self.cellpos[i].z as usize != display.display_layer.unwrap() {
+            if display.display_layer != None
+                && self.cellpos[i].z as usize != display.display_layer.unwrap()
+            {
                 continue;
             }
-            
+
             if !self.cells[i].terminal {
                 if (self.cells[i].is_macro && display.macro_labels)
                     || (!self.cells[i].is_macro && display.cell_labels)
@@ -745,6 +792,35 @@ impl BookshelfCircuit {
             }
         }
     }
+
+    pub fn ps_display_net(&self, ni: usize, pst: &mut PSTool) {
+        let net = &self.nets[ni];
+        let mut cx = 0.0;
+        let mut cy = 0.0;
+
+        for pref in &net.pins {
+            let (x, y) = self.pinloc(pref);
+            cx += x;
+            cy += y;
+        }
+        cx = cx / net.pins.len() as f32;
+        cy = cy / net.pins.len() as f32;
+
+        pst.add_gsave();
+        pst.set_color(1.0, 0.0, 0.0, 1.0);
+        for pref in &net.pins {
+            let (x, y) = self.pinloc(pref);
+            pst.add_line(x, y, cx, cy);
+        }
+        pst.set_color(0.1, 0.1, 0.1, 1.0);
+        pst.add_text(cx, cy, format!("{}[{}] : {:6.1}", net.name, net.pins.len(), self.net_wl(net)));
+        for pref in &net.pins {
+            let (x, y) = self.pinloc(pref);
+            pst.add_text(x, y, format!("{} : {}", self.cells[pref.parent_cell].name, pref.index));
+        }
+        pst.add_grestore();
+    }
+
     pub fn ps_movement(&self, pst: &mut PSTool, display: &PostscriptDisplay) {
         if self.refpos.is_none() {
             return;
@@ -765,10 +841,12 @@ impl BookshelfCircuit {
         pst.set_color(1.0, 0.0, 0.0, 1.0);
 
         for i in 0..self.cells.len() {
-            if display.display_layer != None && self.cellpos[i].z as usize != display.display_layer.unwrap() {
+            if display.display_layer != None
+                && self.cellpos[i].z as usize != display.display_layer.unwrap()
+            {
                 continue;
             }
-            
+
             // let rp: Option<pstools::point::Point> = self.refpos.as_ref()[i];
             let c = &self.cells[i];
             let dx = c.w * 0.5;
@@ -870,6 +948,29 @@ impl BookshelfCircuit {
             self.ps_labels(pst, display);
         }
 
+        if display.display_nets.is_some() {
+            let dn = display.display_nets.as_ref().unwrap();
+            for netname in dn {
+                // println!("Display net {}", netname);
+                let n_idx = self.net_index(netname);
+                if n_idx.is_some() {
+                    println!("Found net {netname} at index {}", n_idx.unwrap());
+                    for p in &self.nets[n_idx.unwrap()].pins {
+                        let cidx = p.parent_cell;
+                        let pidx = p.index;
+                        let c = &self.cells[cidx];
+                        let pin = &c.pins[pidx];
+
+                        // println!("  Cell {} at {} {}, pin offset {} {}", c.name, self.cellpos[cidx].x, self.cellpos[cidx].y, pin.dx, pin.dy);
+
+                    }
+                    self.ps_display_net(n_idx.unwrap(), pst);
+                } else {
+                    println!("Net {netname} not found");
+                }
+            }
+        }
+
         // if display.color_cells {
         //     self.ps_color_cells(pst, display);
         // }
@@ -898,9 +999,8 @@ impl BookshelfCircuit {
                 disp.display_layer = Some(i);
                 self.postscript_display_layer(pst, &disp);
                 pst.add_comment(format!("Translate {} {}", display_size.dx(), 0.0));
-                pst.add_translate(display_size.dx() * 1.05, 0.0);                
+                pst.add_translate(display_size.dx() * 1.05, 0.0);
             }
-
         } else {
             self.postscript_display_layer(pst, display);
         }
@@ -1455,10 +1555,7 @@ impl BookshelfCircuit {
                         dy: dy + offy,
                         parent_cell: cidx,
                         parent_net: nidx,
-                        details: vec![PinDetail {
-                            dx: dx + offx,
-                            dy: dy + offy,
-                        }],
+                        details: vec![PinDetail { dx: dx, dy: dy }],
                     };
 
                     self.cells[cidx].pins.push(pi);
@@ -1640,14 +1737,28 @@ impl BookshelfCircuit {
                 writeln!(
                     &mut f,
                     "{}  {} {} {} {} {} {} : {}",
-                    c.name, self.cellpos[i].x, self.cellpos[i].y, self.cellpos[i].z, c.w, c.h, 1.0, self.orient[i]
+                    c.name,
+                    self.cellpos[i].x,
+                    self.cellpos[i].y,
+                    self.cellpos[i].z,
+                    c.w,
+                    c.h,
+                    1.0,
+                    self.orient[i]
                 )
                 .unwrap();
             } else {
                 writeln!(
                     &mut f,
                     "{}  {} {} {} {} {} {} : {} /FIXED",
-                    c.name, self.cellpos[i].x, self.cellpos[i].y, 0.0, c.w, c.h, 1.0, self.orient[i]
+                    c.name,
+                    self.cellpos[i].x,
+                    self.cellpos[i].y,
+                    0.0,
+                    c.w,
+                    c.h,
+                    1.0,
+                    self.orient[i]
                 )
                 .unwrap();
             }
@@ -2482,15 +2593,18 @@ impl BookshelfCircuit {
         }
     }
 
+    // The details have pin locations relative to the center,
+    // whereas for most calculations, we use lower left of the
+    // cell plus the dx/dy offset of the pin...
+    // 20261121 fixing this, hope to calculate everything right.
     pub fn orient_cell(cell: &mut Cell, orient: Orientation) {
         // First -- put the cell into it's "unmodified" configuration
         cell.h = cell.original_h;
         cell.w = cell.original_w;
         for pin in &mut cell.pins {
-            pin.dx = cell.w - pin.details[0].dx;
-            pin.dy = cell.h - pin.details[0].dy;
+            pin.dx = pin.details[0].dx;
+            pin.dy = pin.details[0].dy;
         }
-
 
         if orient == Orientation::FN
             || orient == Orientation::S
@@ -2500,7 +2614,7 @@ impl BookshelfCircuit {
             // Flip the X position of the pins
             // println!("Doing X reorientation for {}", orient);
             for pin in &mut cell.pins {
-                pin.dx = cell.original_w - pin.details[0].dx;
+                pin.dx = -pin.details[0].dx;
                 // println!("  pin {} moves to {}", pin.name, pin.dx);
             }
         } else {
@@ -2516,7 +2630,7 @@ impl BookshelfCircuit {
         {
             // Flip the X position of the pins
             for pin in &mut cell.pins {
-                pin.dy = cell.original_h - pin.details[0].dy;
+                pin.dy = -pin.details[0].dy;
             }
         } else {
             for pin in &mut cell.pins {
@@ -2537,6 +2651,14 @@ impl BookshelfCircuit {
                 pin.dx = pin.dy;
                 pin.dy = old_dx;
             }
+        }
+
+        // Now move the pins to use the offset
+        let cx = cell.w / 2.0;
+        let cy = cell.h / 2.0;
+        for pin in &mut cell.pins {
+            pin.dx += cx;
+            pin.dy += cy;
         }
     }
 

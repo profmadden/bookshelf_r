@@ -1,12 +1,15 @@
 {
-    "display_cells": true,
+    "display_cells": false,
+    "display_macros": true,
     "fill_cells": true,
-    "macro_labels": true,
+    "macro_labels": false,
     "font_size": 7,
     "note_font_size": 12,
-    "notes": true,
+    "notes": false,
     "underlay": true,
     "underlay_color": [0.95, 1.0, 0.95],
-    "border": 0,
-    "display_layer": 1
+    "border": 20,
+    "display_macro_pins": false,
+    "display_cell_pins" : false,
+    "display_nets" : ["ground", "power", "net15", "net833", "net2404"]
 }

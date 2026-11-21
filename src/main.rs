@@ -255,7 +255,7 @@ fn main() {
                 }
             }
         }
-        bc.layers = 2;
+        // bc.layers = 2;
         bc.postscript(arguments.postscript.unwrap());
     }
 

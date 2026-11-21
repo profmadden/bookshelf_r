@@ -1,0 +1,9 @@
+UCLA nets 1.0
+
+NumNets : 1
+NumPins : 3
+NetDegree : 3 net0
+	  macro B : -40 -90
+	  macro B : -40 90
+	  macro B : 40 90
+	  
